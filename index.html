@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frame — fit tall photos into an Instagram post</title>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="mark">Frame<span class="dot">.</span></span>
+      <span class="tag">frame a photo for any Instagram format — then turn it into a video with your music, in one place</span>
+    </div>
+    <p class="lede">Drop in a phone-sized photo and it's centered inside the frame you pick, with the empty space filled by colors pulled from the picture itself. <b>Your photo is placed at its exact original resolution and saved as lossless PNG — the picture area is never resized, cropped, or recompressed.</b> Everything runs in your browser; nothing is uploaded anywhere.</p>
+  </header>
+
+  <div class="panel">
+    <p class="ptitle">Step 1 · Frame the photos</p>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Instagram format"></div>
+    <div class="rows">
+      <div class="field" id="targetField">
+        <span class="lbl">Target</span>
+        <div class="seg" id="segTarget" role="group" aria-label="Target size"></div>
+        <div class="fixedfmt" id="targetChip" style="display:none"></div>
+        <span class="sub" id="targetHint"></span>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Side fill</span>
+        <div class="seg" id="segMode" role="group" aria-label="Side fill style"></div>
+        <span class="sub" id="modeHint"></span>
+      </div>
+
+      <div class="field slider" id="blurField">
+        <span class="lbl">Blur amount <span class="val" id="blurVal"></span></span>
+        <input type="range" id="blur" min="0" max="100" step="1">
+        <span class="sub">Used by the blurred and frosted fills.</span>
+      </div>
+
+      <div class="field" id="solidField" style="display:none">
+        <span class="lbl">Fill color</span>
+        <div class="solidrow">
+          <input type="color" id="solidColor" aria-label="Fill color">
+          <button type="button" class="chip" id="solidAuto">Auto</button>
+          <button type="button" class="chip" id="solidBlack">Black</button>
+          <button type="button" class="chip" id="solidWhite">White</button>
+        </div>
+        <span class="sub">Auto uses each photo's own average color.</span>
+      </div>
+
+      <div class="field slider">
+        <span class="lbl">Edge shading <span class="val" id="darkVal"></span></span>
+        <input type="range" id="dark" min="0" max="100" step="1">
+        <span class="sub">Softly deepens the very edges of the frame.</span>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Preview</span>
+        <label class="toggle">
+          <input type="checkbox" id="bounds">
+          <span class="switch"></span>
+          Show where the original sits
+        </label>
+        <span class="sub">Guide only — never added to the download.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add photos">
+    <div class="plus">+</div>
+    <h2>Drop photos here</h2>
+    <p>or click to choose — add several at once (JPG, PNG, WebP)</p>
+  </div>
+  <input type="file" id="file" accept="image/*" multiple hidden>
+
+  <div class="bar" id="bar" hidden>
+    <span class="count" id="count"></span>
+    <div class="actions">
+      <button class="btn primary" id="dlAll">Download all images</button>
+      <button class="btn ghost" id="clear">Clear</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">No photos yet — add some above to see them framed.</div>
+
+  <div class="panel" id="videoPanel" style="display:none">
+    <p class="ptitle">Step 2 · Arrange &amp; export a video <span class="fmt" id="fmtLine"></span></p>
+
+    <div class="stitle">Clips <span class="sub2" id="seqInfo"></span></div>
+    <div class="player" id="player">
+      <canvas id="pvCanvas"></canvas>
+      <div class="pvEmpty" id="pvEmpty">Tick photos above to start your video</div>
+    </div>
+    <div class="transport">
+      <button class="btn primary pvbtn" id="pvPlayBtn" title="Play / pause">►</button>
+      <span class="ptime" id="pvTime">0:00 / 0:00</span>
+      <span class="sub" style="margin-left:auto">drag audio blocks to position them · drag edges to trim · ✂ splits at the playhead</span>
+    </div>
+    <div class="tledit" id="tledit">
+      <div class="tlinner" id="tlinner">
+        <div class="ruler" id="ruler"></div>
+        <div class="lane vlane" id="vlane"></div>
+        <div class="alanes" id="alanes"></div>
+        <div class="playhead" id="playhead"></div>
+      </div>
+    </div>
+    <div class="cliptool" id="cliptool" style="display:none">
+      <span class="sub" id="cliptoolLbl"></span>
+      <button class="cbtn" id="ctL" title="Move earlier">◀</button>
+      <button class="cbtn" id="ctR" title="Move later">▶</button>
+      <button class="cbtn" id="ctM" title="1s shorter">−</button>
+      <button class="cbtn" id="ctP" title="1s longer">+</button>
+      <button class="cbtn" id="ctX" title="Remove clip">✕</button>
+    </div>
+    <div class="cliptool" id="audiotool" style="display:none">
+      <span class="sub" id="audiotoolLbl"></span>
+      <button class="cbtn" id="atS" title="Split at playhead">✂</button>
+      <button class="cbtn" id="atX" title="Remove">✕</button>
+    </div>
+    <div class="hintline" id="seqHint">Tick photos above to add them here — then set the order and how long each one shows.</div>
+
+    <div class="stitle sec">Soundtrack</div>
+    <div class="music" id="music">
+      <span class="note">♪</span>
+      <div class="info">
+        <div class="n" id="musicName">No music loaded</div>
+        <div class="d" id="musicDur">Drop audio files here, or choose — several play one after another</div>
+      </div>
+      <div class="spacer"></div>
+      <button type="button" class="chip" id="fitMusic">Match clips to music</button>
+      <button class="btn" id="musicPick" type="button">Add music</button>
+      <input type="file" id="audioFile" accept="audio/*" multiple hidden>
+    </div>
+
+    <div class="rows sec">
+      <div class="field">
+        <span class="lbl">Motion</span>
+        <div class="seg" id="segMotion" role="group" aria-label="Motion"></div>
+        <span class="sub" id="motionHint"></span>
+      </div>
+      <div class="field">
+        <span class="lbl">Transition</span>
+        <div class="seg" id="segTrans" role="group" aria-label="Transition between clips"></div>
+        <div class="seg" id="segTransDur" role="group" aria-label="Transition length" style="display:none"></div>
+        <span class="sub" id="transHint"></span>
+      </div>
+      <div class="field">
+        <span class="lbl">Video quality</span>
+        <div class="seg" id="segVQuality" role="group" aria-label="Video quality"></div>
+        <span class="sub">Ultra encodes at 40 Mbps — far beyond visible loss.</span>
+      </div>
+      <div class="field">
+        <span class="lbl">Audio</span>
+        <label class="toggle"><input type="checkbox" id="vfade"><span class="switch"></span>Fade in / out</label>
+        <span class="sub">Smoothly ramps the music at the start and end.</span>
+      </div>
+    </div>
+
+    <div class="selbar">
+      <span class="selinfo" id="selInfo"></span>
+      <span class="spacer"></span>
+      <button class="btn" id="selAll" type="button">Select all</button>
+      <button class="btn primary" id="exportBtn" type="button" disabled>Export video</button>
+    </div>
+
+    <div class="result" id="result" style="display:none">
+      <div class="resultStage" id="resultStage">
+        <div class="rec" id="expRec"><span class="dot"></span><span id="expRecLbl">Exporting</span></div>
+        <div class="prog" id="expProg"><i></i></div>
+      </div>
+      <div class="resultBar">
+        <span class="sub" id="resultInfo"></span>
+        <span class="spacer"></span>
+        <button class="btn primary" id="dlResult" type="button" style="display:none">Download video</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b>How the quality is preserved:</b> the original image is drawn into the canvas at a 1:1 pixel scale (no interpolation) and saved as PNG, which is lossless. For a standard photo without transparency, the picture area comes out pixel-identical to the file you put in. If a photo already matches the selected shape, the tool detects it, adds nothing, and downloading hands you the original file byte-for-byte — same format, same metadata, completely untouched. Instagram still applies its own compression when you upload — that part is outside any tool's control, but the file you hand it here is untouched.
+    <br><br><b>About the video export:</b> where the browser supports it (recent Chrome and Edge), export merges your frames and music directly into the MP4 with WebCodecs — no real-time recording, so a 60-second video takes only a few seconds. The MP4 muxing library ships inside the app, so export works fully offline. On browsers without WebCodecs the tool honestly falls back to real-time recording and says so. A single Still clip is copied 1:1 with zero resampling (odd dimensions get one duplicated edge row/column, never a removed one); frames inside a transition window are blends of two clips by definition, so choose Cut when strict frame-copies matter. Mixing clips of different sizes in one video scales the smaller ones up to the largest — for absolute crispness, use same-size clips. Video is a compressed format by nature, so it can't be bit-for-bit lossless like the PNG, but at Ultra (40 Mbps H.264, 320 kbps AAC) a still image is far beyond any visible difference; your music is re-encoded to AAC, transparent at these bitrates.
+  </footer>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

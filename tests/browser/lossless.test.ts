@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { computeColors } from "../../src/core/colors";
-import { MODES } from "../../src/core/config";
+import { FORMATS, MODES } from "../../src/core/config";
 import { buildCanvas } from "../../src/render/frame";
 import { drawClipFrame } from "../../src/render/sequence";
 import { S } from "../../src/state";
@@ -66,8 +66,8 @@ function countRegionDiffs(cv: HTMLCanvasElement, dx: number, dy: number, src: Im
 }
 
 function resetSettings(): void {
-  S.tab = "post";
-  S.targetByTab = { post: "post-4x5", story: "story", reel: "reel", profile: "profile" };
+  S.tab = "insta";
+  S.targetByTab = { insta: "ig-4x5", tiktok: "tiktok", yt: "shorts", x: "x-169", fb: "fb-191", li: "li-191", custom: "custom" };
   S.mode = "edges";
   S.blur = 55;
   S.dark = 22;
@@ -122,14 +122,16 @@ describe("lossless invariant — framed images", () => {
     expect(countRegionDiffs(out.cv, 0, 0, src)).toBe(0);
   });
 
-  it("works across every format tab", async () => {
-    for (const [tab, key] of [["post", "post-1x1"], ["post", "post-191"], ["story", "story"], ["reel", "reel"], ["profile", "profile"]]) {
-      resetSettings();
-      S.tab = tab;
-      S.targetByTab[tab] = key;
-      const { it: item, src } = await makeItem(37, 61, 6000);
-      const out = buildCanvas(item);
-      expect(countRegionDiffs(out.cv, out.dx, out.dy, src), `tab=${tab} target=${key}`).toBe(0);
+  it("works across EVERY platform and EVERY target (from config, future-proof)", async () => {
+    const { it: item, src } = await makeItem(37, 61, 6000);
+    for (const f of FORMATS) {
+      for (const t of f.targets) {
+        resetSettings();
+        S.tab = f.tab;
+        S.targetByTab[f.tab] = t.key;
+        const out = buildCanvas(item);
+        expect(countRegionDiffs(out.cv, out.dx, out.dy, src), `tab=${f.tab} target=${t.key}`).toBe(0);
+      }
     }
   });
 });

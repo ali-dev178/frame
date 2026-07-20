@@ -2,8 +2,8 @@ import { targetDef } from "./core/config";
 import type { AudioTrack, Clip, Item, Settings, Target } from "./types";
 
 export const S: Settings = {
-  tab: "post",
-  targetByTab: { post: "post-4x5", story: "story", reel: "reel", profile: "profile", tiktok: "tiktok", yt: "shorts", x: "x-169", custom: "custom" },
+  tab: "insta",
+  targetByTab: { insta: "ig-4x5", tiktok: "tiktok", yt: "shorts", x: "x-169", fb: "fb-191", li: "li-191", custom: "custom" },
   mode: "edges",
   blur: 55,
   dark: 22,

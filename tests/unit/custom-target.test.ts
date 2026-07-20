@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { S, curTarget } from "../../src/state";
 
 beforeEach(() => {
-  S.tab = "post";
-  S.targetByTab = { post: "post-4x5", story: "story", reel: "reel", profile: "profile", tiktok: "tiktok", yt: "shorts", x: "x-169", custom: "custom" };
+  S.tab = "insta";
+  S.targetByTab = { insta: "ig-4x5", tiktok: "tiktok", yt: "shorts", x: "x-169", fb: "fb-191", li: "li-191", custom: "custom" };
   S.customW = 1080;
   S.customH = 1350;
 });

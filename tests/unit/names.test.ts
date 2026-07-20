@@ -8,29 +8,29 @@ function fakeItem(name: string, type = ""): Item {
 }
 
 beforeEach(() => {
-  S.tab = "post";
-  S.targetByTab = { post: "post-4x5", story: "story", reel: "reel", profile: "profile" };
+  S.tab = "insta";
+  S.targetByTab = { insta: "ig-4x5", tiktok: "tiktok", yt: "shorts", x: "x-169", fb: "fb-191", li: "li-191", custom: "custom" };
 });
 
 describe("outName", () => {
   it("appends the target suffix and forces .png", () => {
-    expect(outName(fakeItem("holiday.jpg"))).toBe("holiday_4x5.png");
+    expect(outName(fakeItem("holiday.jpg"))).toBe("holiday_ig-4x5.png");
   });
   it("follows the currently selected target", () => {
-    S.tab = "story";
-    expect(outName(fakeItem("pic.webp"))).toBe("pic_story.png");
+    S.targetByTab.insta = "ig-story";
+    expect(outName(fakeItem("pic.webp"))).toBe("pic_ig-story.png");
   });
 });
 
 describe("passName", () => {
   it("keeps the original extension for passthrough downloads", () => {
-    expect(passName(fakeItem("holiday.JPG"))).toBe("holiday_4x5.JPG");
+    expect(passName(fakeItem("holiday.JPG"))).toBe("holiday_ig-4x5.JPG");
   });
   it("derives the extension from the mime type when the name has none", () => {
-    expect(passName(fakeItem("holiday", "image/jpeg"))).toBe("holiday_4x5.jpg");
+    expect(passName(fakeItem("holiday", "image/jpeg"))).toBe("holiday_ig-4x5.jpg");
   });
   it("falls back to png when nothing is known", () => {
-    expect(passName(fakeItem("holiday"))).toBe("holiday_4x5.png");
+    expect(passName(fakeItem("holiday"))).toBe("holiday_ig-4x5.png");
   });
 });
 

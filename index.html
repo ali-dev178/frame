@@ -4,26 +4,34 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Frame — fit tall photos into an Instagram post</title>
+<title>Frame — fit photos into any social format</title>
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#15140f">
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand">
       <span class="mark">Frame<span class="dot">.</span></span>
-      <span class="tag">frame a photo for any Instagram format — then turn it into a video with your music, in one place</span>
+      <span class="tag">frame a photo for any social format — then turn it into a video with your music, in one place</span>
     </div>
     <p class="lede">Drop in a phone-sized photo and it's centered inside the frame you pick, with the empty space filled by colors pulled from the picture itself. <b>Your photo is placed at its exact original resolution and saved as lossless PNG — the picture area is never resized, cropped, or recompressed.</b> Everything runs in your browser; nothing is uploaded anywhere.</p>
   </header>
 
   <div class="panel">
     <p class="ptitle">Step 1 · Frame the photos</p>
-    <div class="tabs" id="tabs" role="tablist" aria-label="Instagram format"></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Target format"></div>
     <div class="rows">
       <div class="field" id="targetField">
         <span class="lbl">Target</span>
         <div class="seg" id="segTarget" role="group" aria-label="Target size"></div>
         <div class="fixedfmt" id="targetChip" style="display:none"></div>
+        <div class="solidrow" id="customSize" style="display:none">
+          <input type="number" class="num" id="customW" min="1" max="8000" aria-label="Canvas width">
+          <span class="sub">×</span>
+          <input type="number" class="num" id="customH" min="1" max="8000" aria-label="Canvas height">
+        </div>
         <span class="sub" id="targetHint"></span>
       </div>
 
@@ -64,6 +72,16 @@
           Show where the original sits
         </label>
         <span class="sub">Guide only — never added to the download.</span>
+      </div>
+
+      <div class="field" id="presetField">
+        <span class="lbl">Presets</span>
+        <div class="solidrow" id="presetChips"></div>
+        <div class="solidrow">
+          <input type="text" class="txt" id="presetName" placeholder="Preset name" maxlength="24">
+          <button type="button" class="chip" id="presetSave">Save current</button>
+        </div>
+        <span class="sub">Click to apply · right-click to remove.</span>
       </div>
     </div>
   </div>
@@ -114,6 +132,7 @@
       <button class="cbtn" id="ctM" title="1s shorter">−</button>
       <button class="cbtn" id="ctP" title="1s longer">+</button>
       <button class="cbtn" id="ctX" title="Remove clip">✕</button>
+      <input type="text" class="txt capInput" id="ctText" placeholder="Caption for this clip…" maxlength="80">
     </div>
     <div class="cliptool" id="audiotool" style="display:none">
       <span class="sub" id="audiotoolLbl"></span>
@@ -148,6 +167,11 @@
         <span class="sub" id="transHint"></span>
       </div>
       <div class="field">
+        <span class="lbl">Look</span>
+        <div class="seg" id="segLook" role="group" aria-label="Color look"></div>
+        <span class="sub" id="lookHint"></span>
+      </div>
+      <div class="field">
         <span class="lbl">Video quality</span>
         <div class="seg" id="segVQuality" role="group" aria-label="Video quality"></div>
         <span class="sub">Ultra encodes at 40 Mbps — far beyond visible loss.</span>
@@ -180,8 +204,8 @@
   </div>
 
   <footer>
-    <b>How the quality is preserved:</b> the original image is drawn into the canvas at a 1:1 pixel scale (no interpolation) and saved as PNG, which is lossless. For a standard photo without transparency, the picture area comes out pixel-identical to the file you put in. If a photo already matches the selected shape, the tool detects it, adds nothing, and downloading hands you the original file byte-for-byte — same format, same metadata, completely untouched. Instagram still applies its own compression when you upload — that part is outside any tool's control, but the file you hand it here is untouched.
-    <br><br><b>About the video export:</b> where the browser supports it (recent Chrome and Edge), export merges your frames and music directly into the MP4 with WebCodecs — no real-time recording, so a 60-second video takes only a few seconds. The MP4 muxing library ships inside the app, so export works fully offline. On browsers without WebCodecs the tool honestly falls back to real-time recording and says so. A single Still clip is copied 1:1 with zero resampling (odd dimensions get one duplicated edge row/column, never a removed one); frames inside a transition window are blends of two clips by definition, so choose Cut when strict frame-copies matter. Mixing clips of different sizes in one video scales the smaller ones up to the largest — for absolute crispness, use same-size clips. Video is a compressed format by nature, so it can't be bit-for-bit lossless like the PNG, but at Ultra (40 Mbps H.264, up to 320 kbps AAC — capped at what your system's encoder supports) a still image is far beyond any visible difference; your music is re-encoded to AAC, transparent at these bitrates.
+    <b>How the quality is preserved:</b> the original image is drawn into the canvas at a 1:1 pixel scale (no interpolation) and saved as PNG, which is lossless. For a standard photo without transparency, the picture area comes out pixel-identical to the file you put in. If a photo already matches the selected shape, the tool detects it, adds nothing, and downloading hands you the original file byte-for-byte — same format, same metadata, completely untouched. Platforms still apply their own compression when you upload — that part is outside any tool's control, but the file you hand them here is untouched.
+    <br><br><b>About the video export:</b> where the browser supports it (recent Chrome and Edge), export merges your frames and music directly into the MP4 with WebCodecs — no real-time recording, so a 60-second video takes only a few seconds. The MP4 muxing library ships inside the app, so export works fully offline. On browsers without WebCodecs the tool honestly falls back to real-time recording and says so. A single Still clip is copied 1:1 with zero resampling (odd dimensions get one duplicated edge row/column, never a removed one); captions and color looks draw over the frame by definition, and frames inside a transition window are blends of two clips — so choose Cut, Look: None, and no caption when strict frame-copies matter. Mixing clips of different sizes in one video scales the smaller ones up to the largest — for absolute crispness, use same-size clips. Video is a compressed format by nature, so it can't be bit-for-bit lossless like the PNG, but at Ultra (40 Mbps H.264, up to 320 kbps AAC — capped at what your system's encoder supports) a still image is far beyond any visible difference; your music is re-encoded to AAC, transparent at these bitrates.
   </footer>
 </div>
 <script type="module" src="/src/main.ts"></script>

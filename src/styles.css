@@ -266,3 +266,14 @@ footer{margin-top:32px;padding-top:24px}
 .tledit::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:8px}
 .tledit::-webkit-scrollbar-track{background:transparent}
 @media (max-width:560px){ .rows{gap:18px} .mark{font-size:26px} }
+
+/* ===== v0.2: custom size, presets, restore bar, captions ===== */
+.num{width:86px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;color:var(--ink);font:inherit;font-size:13px;padding:8px 10px}
+.txt{background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;color:var(--ink);font:inherit;font-size:13px;padding:8px 10px;min-width:140px}
+.txt::placeholder{color:var(--muted-2)}
+.restoreBar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--brass-dim);border-radius:12px;padding:12px 16px;margin-bottom:24px}
+.restoreBar .rinfo{color:var(--muted);font-size:13px}
+.restoreBar .spacer{flex:1}
+#presetChips{min-height:20px}
+#presetChips:empty::after{content:"No presets yet — save your favorite settings.";color:var(--muted-2);font-size:12px}
+.capInput{flex:1;min-width:200px}

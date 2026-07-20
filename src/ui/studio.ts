@@ -1,6 +1,7 @@
 import { applyFadesFrom, ensureCtx, scheduleSegs } from "../audio/engine";
-import { MOTIONS, TDURS, TRANSITIONS, VQUAL } from "../core/config";
+import { LOOKS, MOTIONS, TDURS, TRANSITIONS, VQUAL } from "../core/config";
 import { fmtTime } from "../core/names";
+import { markDirty } from "../core/project";
 import { exportFast } from "../export/fast";
 import { exportRecord } from "../export/record";
 import { REC, hasAEnc, hasVEnc } from "../export/capabilities";
@@ -24,7 +25,7 @@ export function setSelected(it: Item, on: boolean): void {
     app.seq = app.seq.filter(function(c){ return c.id !== it.id; });
     if(app.selClipId === it.id) app.selClipId = null;
   }
-  renderTimeline(); updateSelUI(); invalidateResult();
+  renderTimeline(); updateSelUI(); invalidateResult(); markDirty();
 }
 
 export function updateSelUI(): void {
@@ -130,6 +131,12 @@ let resultBlob: Blob | null = null;
 export function invalidateResult(): void {
   if(app.vbusy) return;
   pvPause();
+  invalidateResultQuiet();
+}
+
+/** Same teardown WITHOUT pausing the preview — e.g. while typing a caption. */
+export function invalidateResultQuiet(): void {
+  if(app.vbusy) return;
   resultBlob = null;
   if(app.resultUrl){ URL.revokeObjectURL(app.resultUrl); app.resultUrl = null; }
   $("result").style.display = "none";
@@ -189,40 +196,59 @@ function finishExport(blob: Blob, ext: string, engineLabel: string): void {
   };
 }
 
-/** Step 2 panel wiring: motion/quality/transition segs, transport, export. */
+/**
+ * Step 2 panel wiring: motion/look/quality/transition segs, transport,
+ * export. Idempotent — presets and project restore re-run it to resync
+ * every control with S.
+ */
 export function initStudio(): void {
   if(hasVEnc) setFmtLine('fast export: <b>merges image + sound directly</b> — no real-time recording');
   else if(REC) setFmtLine('this browser records in <b class="bad">real time</b> (' + REC.label + ') — for fast export use recent Chrome or Edge');
   else setFmtLine('<b class="bad">this browser can\'t make videos</b> — use a recent Chrome, Edge, or Safari');
 
+  function hintOf(list: typeof MOTIONS, key: string): string {
+    const o = list.filter(function(x){return x.key===key;})[0] || list[0];
+    return o.hint!;
+  }
+
   buildSeg($("segMotion"), MOTIONS, S.motion, function(k){
     S.motion = k;
     refreshSeg($("segMotion"), MOTIONS.map(function(x){return x.key;}), k);
-    $("motionHint").textContent = MOTIONS.filter(function(x){return x.key===k;})[0].hint!;
-    invalidateResult();
+    $("motionHint").textContent = hintOf(MOTIONS, k);
+    drawPreviewFrame(); invalidateResult(); markDirty();
   });
-  $("motionHint").textContent = MOTIONS[0].hint!;
+  $("motionHint").textContent = hintOf(MOTIONS, S.motion);
+
+  buildSeg($("segLook"), LOOKS, S.look, function(k){
+    S.look = k;
+    refreshSeg($("segLook"), LOOKS.map(function(x){return x.key;}), k);
+    $("lookHint").textContent = hintOf(LOOKS, k);
+    drawPreviewFrame(); invalidateResult(); markDirty();
+  });
+  $("lookHint").textContent = hintOf(LOOKS, S.look);
+
   buildSeg($("segVQuality"), VQUAL, S.vq, function(k){
     S.vq = k;
     refreshSeg($("segVQuality"), VQUAL.map(function(x){return x.key;}), k);
-    invalidateResult();
+    invalidateResult(); markDirty();
   });
   const vfade = $<HTMLInputElement>("vfade"); vfade.checked = S.vfade;
 
   buildSeg($("segTrans"), TRANSITIONS, S.trans, function(k){
     S.trans = k;
     refreshSeg($("segTrans"), TRANSITIONS.map(function(x){return x.key;}), k);
-    $("transHint").textContent = TRANSITIONS.filter(function(x){return x.key===k;})[0].hint!;
+    $("transHint").textContent = hintOf(TRANSITIONS, k);
     $("segTransDur").style.display = (k === "none") ? "none" : "";
     renderTimeline(); invalidateResult();
   });
-  $("transHint").textContent = TRANSITIONS[0].hint!;
-  buildSeg($("segTransDur"), TDURS, "0.6", function(k){
+  $("transHint").textContent = hintOf(TRANSITIONS, S.trans);
+  $("segTransDur").style.display = (S.trans === "none") ? "none" : "";
+  buildSeg($("segTransDur"), TDURS, String(S.transDur), function(k){
     S.transDur = parseFloat(k);
     refreshSeg($("segTransDur"), TDURS.map(function(x){return x.key;}), k);
     renderTimeline(); invalidateResult();
   });
-  vfade.addEventListener("change", function(){ S.vfade = vfade.checked; invalidateResult(); });
+  vfade.onchange = function(){ S.vfade = vfade.checked; invalidateResult(); markDirty(); };
 
   $("pvPlayBtn").onclick = function(){ if(pv.playing) pvPause(); else pvPlay(); };
 

@@ -43,11 +43,16 @@ export interface Settings {
   bounds: boolean;
   solidMode: "auto" | "custom";
   solidColor: string;
+  /** Custom-tab canvas size — only the ratio matters for framing. */
+  customW: number;
+  customH: number;
   motion: string;
   vq: string;
   vfade: boolean;
   trans: string;
   transDur: number;
+  /** Video color look (ctx.filter) — "none" keeps Still+Cut frames 1:1. */
+  look: string;
 }
 
 /** Per-row / per-column averaged edge colors of a photo. */
@@ -101,12 +106,16 @@ export interface Clip {
   id: number;
   /** Seconds this clip shows. */
   dur: number;
+  /** Caption drawn over this clip's frames. */
+  text?: string;
 }
 
 /** One audio block on the timeline. */
 export interface AudioTrack {
   id: number;
   name: string;
+  /** The original encoded file — kept so projects can be saved/restored. */
+  file?: Blob;
   buffer: AudioBuffer;
   /** Full decoded duration, seconds. */
   dur: number;

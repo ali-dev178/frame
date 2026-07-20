@@ -15,6 +15,21 @@ export const FORMATS: FormatTab[] = [
   ]},
   {tab:"profile", label:"Profile", targets:[
     {key:"profile", label:"Profile picture 1:1", r:1, suffix:"profile", dims:"320 × 320 min", hint:"Profile picture — shown as a circle, so keep key content centered."}
+  ]},
+  {tab:"tiktok", label:"TikTok", targets:[
+    {key:"tiktok",       label:"TikTok 9:16", r:9/16, suffix:"tiktok",      dims:"1080 × 1920", hint:"Full-screen vertical TikTok video or photo."},
+    {key:"tiktok-photo", label:"Photo 3:4",   r:3/4,  suffix:"tiktok-3x4", dims:"1080 × 1440", hint:"TikTok photo-mode post."}
+  ]},
+  {tab:"yt", label:"YouTube", targets:[
+    {key:"shorts",   label:"Shorts 9:16",     r:9/16, suffix:"shorts",   dims:"1080 × 1920", hint:"Full-screen vertical YouTube Short."},
+    {key:"yt-thumb", label:"Thumbnail 16:9",  r:16/9, suffix:"yt-thumb", dims:"1280 × 720",  hint:"Video thumbnail — wide, so tall photos get large side bars."}
+  ]},
+  {tab:"x", label:"X", targets:[
+    {key:"x-169", label:"Wide 16:9",  r:16/9, suffix:"x-16x9", dims:"1200 × 675",  hint:"Landscape X post — the classic timeline crop."},
+    {key:"x-1x1", label:"Square 1:1", r:1,    suffix:"x-1x1",  dims:"1080 × 1080", hint:"Square X post."}
+  ]},
+  {tab:"custom", label:"Custom", targets:[
+    {key:"custom", label:"Custom", r:1, suffix:"custom", dims:"", hint:"Pick any canvas shape — width and height set the ratio."}
   ]}
 ];
 
@@ -53,12 +68,31 @@ export const VQUAL: QualityDef[] = [
 ];
 
 export const TRANSITIONS: OptionDef[] = [
-  {key:"none",      label:"Cut",          hint:"Hard cut — the only mode where Still frames stay 1:1 pixel copies end to end."},
+  {key:"none",      label:"Cut",          hint:"Hard cut — with Still, Look: None, and no captions, frames stay 1:1 pixel copies."},
   {key:"crossfade", label:"Crossfade",    hint:"Each clip dissolves smoothly into the next."},
   {key:"fadeblack", label:"Fade black",   hint:"Dips to black between clips — cinematic and forgiving."},
   {key:"slide",     label:"Slide",        hint:"The next clip slides in from the right."},
-  {key:"wipe",      label:"Wipe",         hint:"The next clip is revealed left-to-right."}
+  {key:"slideup",   label:"Slide up",     hint:"The next clip slides up from the bottom."},
+  {key:"wipe",      label:"Wipe",         hint:"The next clip is revealed left-to-right."},
+  {key:"iris",      label:"Iris",         hint:"The next clip opens from a circle in the center."}
 ];
+
+export const LOOKS: OptionDef[] = [
+  {key:"none",  label:"None",  hint:"Untouched color — with Still + Cut (and no captions) this is the pixel-perfect option."},
+  {key:"warm",  label:"Warm",  hint:"A gentle golden-hour warmth."},
+  {key:"cool",  label:"Cool",  hint:"A cooler, cleaner cast."},
+  {key:"mono",  label:"Mono",  hint:"Black & white with a touch of contrast."},
+  {key:"vivid", label:"Vivid", hint:"Richer color and a little extra punch."}
+];
+
+/** ctx.filter strings per look — "" means the untouched 1:1 path stays available. */
+export const LOOK_FILTERS: Record<string, string> = {
+  none: "",
+  warm: "sepia(0.22) saturate(1.25) contrast(1.02)",
+  cool: "hue-rotate(-10deg) saturate(1.08) brightness(1.02)",
+  mono: "grayscale(1) contrast(1.05)",
+  vivid: "saturate(1.35) contrast(1.06)",
+};
 
 export const TDURS: OptionDef[] = [
   {key:"0.3", label:"0.3s"},

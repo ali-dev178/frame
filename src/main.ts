@@ -4,6 +4,8 @@ import { initCards, syncBars } from "./ui/cards";
 import { initStudio } from "./ui/studio";
 import { initTimeline } from "./ui/timeline";
 import { initSoundtrack } from "./ui/soundtrack";
+import { initPresets } from "./ui/presets";
+import { maybeOfferRestore } from "./ui/restore";
 
 // Init order mirrors the original single-file app's top-to-bottom execution.
 initControls();
@@ -12,3 +14,8 @@ initStudio();
 initTimeline();
 initSoundtrack();
 syncBars();
+
+// async boot tail: presets load, then session restore (restores settings
+// silently, offers media restore behind a bar, then arms autosave)
+initPresets().catch(function(e){ console.error("presets failed to load", e); });
+maybeOfferRestore().catch(function(e){ console.error("session restore failed", e); });

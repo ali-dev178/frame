@@ -51,17 +51,32 @@ against real Chromium for every fill mode — it must stay green. The moving par
 
 ```
 src/
-├── main.ts          entry — calls init* in the original app's execution order
+├── main.ts          entry — sync init* calls, then async tail (presets, session restore)
 ├── state.ts         S (settings) + app (items/seq/tracks/selection/busy) + selectors
 ├── types.ts         all interfaces
-├── core/            config (FORMATS/MODES/… arrays), layout math, color analysis, naming
-├── render/          fills (margin painters), frame (buildCanvas), sequence (drawAtTime)
+├── core/            config arrays (FORMATS/MODES/LOOKS/…), layout, colors, naming,
+│                    idb (kv wrapper), project (autosave/serialize — clips saved as item INDEXES)
+├── render/          fills (margin painters), frame (buildCanvas), sequence (drawAtTime+captions+looks)
 ├── audio/           Web Audio: scheduling, fade envelope, offline mixdown
-├── export/          capabilities probe, WebCodecs fast path, MediaRecorder fallback
+├── export/          capabilities probe, WebCodecs fast path (Mediabunny mux), MediaRecorder fallback
 ├── platform/        THE only browser-vs-desktop split: saveBlob/saveMany adapter
-└── ui/              dom helpers, controls, cards+dropzone, studio, timeline editor, soundtrack
+└── ui/              dom, controls, cards+dropzone, studio, timeline, soundtrack, presets, restore
 electron/            desktop shell: main (window+IPC+smoke probe), preload (frameNative bridge)
+public/icons/        app icons — regenerate with `node scripts/make-icons.mjs`
 ```
+
+**Persistence** — the whole session (settings + original photo/audio blobs + timeline)
+autosaves debounced to IndexedDB (`src/core/project.ts`); `markDirty()` is funneled through
+`scheduleRender`/`renderTimeline`/`setSelected`/`loadFile` — new mutation paths must reach one
+of those or call `markDirty()` themselves. On boot, settings restore silently and media restores
+behind a bar (`src/ui/restore.ts`). `initControls`/`initStudio` are **idempotent by design** —
+presets and restore re-run them to resync the whole UI with `S`; keep them re-runnable (use
+`on*=` assignments, not addEventListener; rebuild innerHTML).
+
+**Looks & captions** — color looks are `ctx.filter` strings (`LOOK_FILTERS`); the exact 1:1
+video-copy path requires `look === "none"` — the honesty condition is Still + Cut + None.
+Captions live on `Clip.text`, drawn by `drawCaption` after frames, alpha-crossfaded through
+transition windows.
 
 **Desktop specifics:** one Vite codebase, two modes (`--mode desktop` adds the Electron
 plugin; web build stays pure). The renderer detects desktop by the presence of
@@ -102,6 +117,10 @@ Key design points that span files:
 - Video output dimensions must be **even** (`outDims` rounds up; encoders reject odd sizes).
 - WebCodecs is SecureContext-gated — relevant for the future Electron shell (use `loadFile()` or a
   privileged custom scheme, not an opaque origin).
-- Roadmap (tracked in session tasks): ① foundation (done) → ② Electron shell + Win/Mac installers
-  (unsigned initially) via GitHub Actions → ③ PWA + IndexedDB persistence → ④ more platforms/formats
-  → ⑤ richer editing (text overlays, per-clip settings, filters). Repo is private for now.
+- The web build is an installable **PWA** (vite-plugin-pwa, web mode only — the Electron build
+  deliberately has NO service worker). Regenerate icons with `node scripts/make-icons.mjs`.
+- Vitest browser mode must use the FULL chromium (`launch: { channel: "chromium" }`) — the
+  default headless-shell build crashes on `VideoEncoder.encode`.
+- Roadmap: phases ①–⑤ delivered (foundation, desktop shell, PWA+persistence, formats, richer
+  editing). Future candidates: per-clip motion overrides, video clip import, code signing,
+  auto-update via electron-updater (feed files already ship with releases). Repo is private.

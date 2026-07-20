@@ -1,5 +1,6 @@
 import { computeColors } from "../core/colors";
 import { outName, passName } from "../core/names";
+import { clearSaved, markDirty } from "../core/project";
 import { platform } from "../platform";
 import type { SaveJob, SaveOutcome } from "../platform";
 import { buildCanvas } from "../render/frame";
@@ -31,29 +32,34 @@ export function initCards(): void {
     if(e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
   });
 
-  $("clear").onclick = function(){ if(app.vbusy) return; app.items = []; app.seq = []; grid.innerHTML=""; invalidateResult(); renderTimeline(); syncBars(); };
+  $("clear").onclick = function(){ if(app.vbusy) return; app.items = []; app.seq = []; grid.innerHTML=""; invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
   $("dlAll").onclick = downloadAll;
 }
 
 function addFiles(list: FileList): void {
-  Array.from(list).filter(function(f){ return /^image\//.test(f.type); }).forEach(loadOne);
+  Array.from(list).filter(function(f){ return /^image\//.test(f.type); }).forEach(function(f){ loadFile(f); });
 }
 
-function loadOne(f: File): void {
-  const url = URL.createObjectURL(f);
-  const img = new Image();
-  img.onload = function(){
-    const id = ++app.idc;
-    const it: Item = { id:id, name:f.name || ("image-"+id), file:f, img:img, iw:img.naturalWidth, ih:img.naturalHeight, edges:null, grad:null, canvas:null, el:null };
-    try { computeColors(it); } catch(e){ it.edges=null; it.grad=null; }
-    app.items.push(it);
-    createCard(it);
-    renderItem(it);
-    syncBars();
-    URL.revokeObjectURL(url);
-  };
-  img.onerror = function(){ URL.revokeObjectURL(url); };
-  img.src = url;
+/** Loads one image file into the grid; resolves with the item (null on failure). */
+export function loadFile(f: File): Promise<Item | null> {
+  return new Promise(function(resolve){
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = function(){
+      const id = ++app.idc;
+      const it: Item = { id:id, name:f.name || ("image-"+id), file:f, img:img, iw:img.naturalWidth, ih:img.naturalHeight, edges:null, grad:null, canvas:null, el:null };
+      try { computeColors(it); } catch(e){ it.edges=null; it.grad=null; }
+      app.items.push(it);
+      createCard(it);
+      renderItem(it);
+      syncBars();
+      URL.revokeObjectURL(url);
+      markDirty();
+      resolve(it);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
 }
 
 function createCard(it: Item): void {
@@ -147,6 +153,7 @@ export function renderAll(): void {
 export function scheduleRender(delay?: number): void {
   clearTimeout(rerenderTimer);
   rerenderTimer = window.setTimeout(renderAll, delay || 0);
+  markDirty(); // every framing-settings change funnels through here
 }
 
 function verifyItem(it: Item): void {

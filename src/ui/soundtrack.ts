@@ -40,7 +40,7 @@ function addAudioFiles(list: FileList): void {
     fr.onload = function(){
       ensureCtx().decodeAudioData((fr.result as ArrayBuffer).slice(0), function(buf){
         const atDefault = Math.max(0, Math.min(round10(pv.t), Math.max(0, totalDur() - 0.5)));
-        const t: AudioTrack = { id: ++app.trackIdc, name: file.name, buffer: buf, dur: buf.duration,
+        const t: AudioTrack = { id: ++app.trackIdc, name: file.name, file: file, buffer: buf, dur: buf.duration,
                   start: 0, end: buf.duration, at: atDefault, lane: nextLane() };
         app.tracks.push(t); app.selTrackId = t.id;
         refreshAudioUI(); invalidateResult();

@@ -1,16 +1,19 @@
 # Frame.
 
-Fit tall photos into any Instagram format — **losslessly** — then turn them into a video
-with your music, all in one place. Everything runs locally; no photo or audio ever leaves
-your machine.
+Fit photos into any social format — **losslessly** — then turn them into a video with your
+music, all in one place. Everything runs locally; no photo or audio ever leaves your machine.
 
-- The photo is placed at its exact original resolution and saved as lossless PNG — the
-  picture area is never resized, cropped, or recompressed (there's an in-app **Verify**
-  button that proves it per photo).
+- Instagram, TikTok, YouTube, X, or any custom canvas size — the photo is placed at its
+  exact original resolution and saved as lossless PNG; the picture area is never resized,
+  cropped, or recompressed (the in-app **Verify** button proves it per photo).
 - If a photo already matches the target shape, downloading hands you the original file
   byte-for-byte.
 - The video studio arranges framed photos on a timeline with music (drag, trim, split),
-  and exports MP4 via WebCodecs in seconds — no real-time recording where supported.
+  per-clip captions, color looks, and seven transitions — exported to MP4 via WebCodecs
+  in seconds, no real-time recording where supported.
+- Your session autosaves locally (photos, timeline, settings) and offers to restore next
+  launch; favorite settings can be saved as one-click presets.
+- The web version installs as a PWA and works fully offline.
 
 ## Download (desktop)
 

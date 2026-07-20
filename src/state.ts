@@ -3,21 +3,29 @@ import type { AudioTrack, Clip, Item, Settings, Target } from "./types";
 
 export const S: Settings = {
   tab: "post",
-  targetByTab: { post: "post-4x5", story: "story", reel: "reel", profile: "profile" },
+  targetByTab: { post: "post-4x5", story: "story", reel: "reel", profile: "profile", tiktok: "tiktok", yt: "shorts", x: "x-169", custom: "custom" },
   mode: "edges",
   blur: 55,
   dark: 22,
   bounds: false,
   solidMode: "auto",
   solidColor: "#101010",
+  customW: 1080,
+  customH: 1350,
   motion: "static",
   vq: "ultra",
   vfade: true,
   trans: "none",
   transDur: 0.6,
+  look: "none",
 };
 
 export function curTarget(): Target {
+  if(S.tab === "custom"){
+    const w = Math.max(1, Math.round(S.customW) || 1080), h = Math.max(1, Math.round(S.customH) || 1350);
+    return { key: "custom", label: "Custom " + w + "×" + h, r: w/h, suffix: w + "x" + h,
+             dims: w + " × " + h, hint: "Your own canvas — the photo is framed to these proportions." };
+  }
   return targetDef(S.tab, S.targetByTab[S.tab]);
 }
 

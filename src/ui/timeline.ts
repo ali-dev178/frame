@@ -1,8 +1,9 @@
 import { fmtTime, shortName } from "../core/names";
+import { markDirty } from "../core/project";
 import { S, app, byId, totalDur, trackById } from "../state";
 import type { AudioTrack, Clip } from "../types";
 import { $ } from "./dom";
-import { drawPreviewFrame, invalidateResult, pv, pvSeek, setSelected, updatePvTime, updateSelUI } from "./studio";
+import { drawPreviewFrame, invalidateResult, invalidateResultQuiet, pv, pvSeek, setSelected, updatePvTime, updateSelUI } from "./studio";
 import { refreshAudioUI } from "./soundtrack";
 
 /** Pixels per second on the timeline — recomputed by renderTimeline to fit. */
@@ -53,9 +54,10 @@ export function renderTimeline(): void {
   const info = $("seqInfo");
   info.textContent = has ? (app.seq.length + (app.seq.length===1?" clip":" clips") + " · " + total + "s total") : "";
   info.classList.toggle("warn", total > 90);
-  if(total > 90) info.textContent += " — over Instagram's 90s reel limit";
+  if(total > 90) info.textContent += " — over 90s, longer than some platforms allow";
 
   drawPreviewFrame(); updatePvTime();
+  markDirty(); // every timeline mutation re-renders through here — even to empty
   if(!has) return;
 
   tlPps = Math.max(5, Math.min(60, tlWidth() / Math.max(total, 8)));
@@ -281,7 +283,15 @@ function showClipTool(): void {
   $("cliptoolLbl").textContent = "Clip " + (i+1) + (it ? " · " + it.name : "") + " · " + app.seq[i].dur + "s";
   $<HTMLButtonElement>("ctL").disabled = (i === 0);
   $<HTMLButtonElement>("ctR").disabled = (i === app.seq.length - 1);
+  const txt = $<HTMLInputElement>("ctText");
+  // resync when the SELECTED CLIP changes even if the field has focus —
+  // otherwise a clip switch leaves the old clip's caption editable into the new one
+  if(document.activeElement !== txt || capSyncId !== app.selClipId){
+    txt.value = app.seq[i].text || "";
+    capSyncId = app.selClipId;
+  }
 }
+let capSyncId: number | null = null;
 
 // toolbar for the selected audio piece
 function selTrackIdx(): number {
@@ -330,6 +340,17 @@ export function initTimeline(): void {
   $("ctP").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; app.seq[i].dur=Math.min(60,app.seq[i].dur+1); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
   $("ctX").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; const it=byId(app.seq[i].id); if(it) setSelected(it,false); };
 
+  // per-clip caption — updates the preview live without rebuilding the
+  // timeline (a rebuild would steal focus mid-typing)
+  const ctText = $<HTMLInputElement>("ctText");
+  ctText.oninput = function(){
+    const i = selClipIdx(); if(app.vbusy || i < 0) return;
+    const v = ctText.value;
+    app.seq[i].text = v.trim() ? v : undefined;
+    // quiet invalidation: typing must not pause a playing preview
+    drawPreviewFrame(); invalidateResultQuiet(); markDirty();
+  };
+
   $("atS").onclick = function(){
     const i = selTrackIdx(); if(app.vbusy || i < 0) return;
     const t = app.tracks[i], len = t.end - t.start, rel = pv.t - t.at;
@@ -337,7 +358,7 @@ export function initTimeline(): void {
       $("audiotoolLbl").textContent = "Move the playhead over this audio, then split.";
       return;
     }
-    const right: AudioTrack = { id: ++app.trackIdc, name: t.name, buffer: t.buffer, dur: t.dur,
+    const right: AudioTrack = { id: ++app.trackIdc, name: t.name, file: t.file, buffer: t.buffer, dur: t.dur,
                   start: t.start + rel, end: t.end, at: t.at + rel, lane: t.lane };
     t.end = t.start + rel;
     app.tracks.splice(i+1, 0, right);

@@ -114,12 +114,8 @@ input[type=range]::-moz-range-thumb{
 .stage canvas{display:block;max-width:100%;height:auto;border-radius:2px}
 .bounds{position:absolute;pointer-events:none;border:1px dashed rgba(201,162,75,.95);box-shadow:0 0 0 1px rgba(0,0,0,.4);display:none}
 .bounds.on{display:block}
-.bounds::before{
-  content:"original — untouched";
-  position:absolute;top:4px;left:4px;
-  font-size:9px;letter-spacing:.08em;color:var(--brass);white-space:nowrap;
-  background:rgba(0,0,0,.65);padding:2px 7px;border-radius:9px;
-}
+/* the dashed border alone marks the untouched original — any text label
+   collides with artwork/controls at small card sizes */
 .card .meta{padding:12px 14px;display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--line)}
 .card .name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card .dims{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}

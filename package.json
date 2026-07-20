@@ -21,10 +21,10 @@
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
-    "mp4-muxer": "^5.2.2",
     "@vitest/browser": "^3.2.7",
     "electron": "^43.1.1",
     "electron-builder": "^26.15.3",
+    "mediabunny": "^1.50.9",
     "playwright": "^1.61.1",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",

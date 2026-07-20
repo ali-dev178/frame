@@ -83,9 +83,11 @@ Key design points that span files:
 - **Analysis cache**: `computeColors` (src/core/colors.ts) runs once per photo and caches
   edges/avg/duo/grad on the item; fills degrade gracefully if it threw (oversized canvas).
 - **Two export engines** (orchestrated in `src/ui/studio.ts`, prefers fast, falls back honestly):
-  `exportFast` = WebCodecs H.264+AAC muxed by `mp4-muxer` (npm, bundled — offline-capable);
-  `exportRecord` = real-time MediaRecorder. Capability flags live in `src/export/capabilities.ts`.
-  Note: `mp4-muxer` is deprecated upstream in favor of Mediabunny (same author) — planned migration.
+  `exportFast` = WebCodecs H.264+AAC muxed by **Mediabunny** (npm, bundled — offline-capable;
+  successor to the deprecated mp4-muxer). Mediabunny's packet adds are async while encoder
+  callbacks are sync — the per-track promise chains in `exportFast` keep decode order; don't
+  fire-and-forget `source.add()`. `exportRecord` = real-time MediaRecorder. Capability flags
+  live in `src/export/capabilities.ts`.
 - **UI module cycles are intentional and safe**: cards↔studio↔timeline↔soundtrack import each
   other's functions, but only call them at event time; all wiring lives in `init*()` functions
   invoked by `main.ts` after every module is loaded. Don't add top-level cross-module *calls*.

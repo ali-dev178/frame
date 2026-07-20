@@ -1,4 +1,4 @@
-import { ArrayBufferTarget, Muxer } from "mp4-muxer";
+import { BufferTarget, EncodedAudioPacketSource, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output } from "mediabunny";
 import { renderAudioOffline } from "../audio/engine";
 import { VQUAL } from "../core/config";
 import { drawAtTime, outDims } from "../render/sequence";
@@ -51,16 +51,26 @@ export async function exportFast(onProgress: (f: number, label: string) => void)
   if(!codec) throw new Error("no supported H.264 config");
   const audioPlan = hasAudio() ? await renderAudioOffline(total) : null;
 
-  const target = new ArrayBufferTarget();
-  const videoCfg = { codec: "avc" as const, width: W, height: H };
-  const muxer = audioPlan
-    ? new Muxer({ target: target, fastStart: "in-memory", video: videoCfg,
-                  audio: { codec: "aac", sampleRate: audioPlan.sampleRate, numberOfChannels: 2 } })
-    : new Muxer({ target: target, fastStart: "in-memory", video: videoCfg });
+  const output = new Output({
+    format: new Mp4OutputFormat({ fastStart: "in-memory" }),
+    target: new BufferTarget(),
+  });
+  const videoSource = new EncodedVideoPacketSource("avc");
+  output.addVideoTrack(videoSource, { frameRate: fps });
+  const audioSource = audioPlan ? new EncodedAudioPacketSource("aac") : null;
+  if(audioSource) output.addAudioTrack(audioSource);
+  await output.start();
 
   let vErr: unknown = null;
+  // encoder callbacks are sync but mediabunny adds are async — a promise
+  // chain per track keeps packets in decode order
+  let vMux: Promise<unknown> = Promise.resolve();
   const venc = new VideoEncoder({
-    output: function(chunk, meta){ muxer.addVideoChunk(chunk, meta); },
+    output: function(chunk, meta){
+      vMux = vMux
+        .then(function(){ return videoSource.add(EncodedPacket.fromEncodedChunk(chunk), meta); })
+        .catch(function(e){ if(!vErr) vErr = e; });
+    },
     error: function(e){ vErr = e; }
   });
   venc.configure({ codec: codec, width: W, height: H, bitrate: q.v, framerate: fps });
@@ -79,15 +89,21 @@ export async function exportFast(onProgress: (f: number, label: string) => void)
     if(i % 10 === 0){ onProgress(i/frames*0.85, "Exporting"); await new Promise(function(r){ setTimeout(r, 0); }); }
   }
   await venc.flush();
+  await vMux;
   if(vErr) throw vErr;
 
-  if(audioPlan){
+  if(audioPlan && audioSource){
     onProgress(0.9, "Exporting");
     const aBitrate = await pickAacBitrate(audioPlan.sampleRate, 2, q.a);
     if(aBitrate === null) throw new Error("no supported AAC config"); // → honest real-time fallback
     let aErr: unknown = null;
+    let aMux: Promise<unknown> = Promise.resolve();
     const aenc = new AudioEncoder({
-      output: function(chunk, meta){ muxer.addAudioChunk(chunk, meta); },
+      output: function(chunk, meta){
+        aMux = aMux
+          .then(function(){ return audioSource.add(EncodedPacket.fromEncodedChunk(chunk), meta); })
+          .catch(function(e){ if(!aErr) aErr = e; });
+      },
       error: function(e){ aErr = e; }
     });
     aenc.configure({ codec: "mp4a.40.2", sampleRate: audioPlan.sampleRate, numberOfChannels: 2, bitrate: aBitrate });
@@ -103,9 +119,12 @@ export async function exportFast(onProgress: (f: number, label: string) => void)
       while(aenc.encodeQueueSize > 10){ await new Promise(function(r){ setTimeout(r, 4); }); }
     }
     await aenc.flush();
+    await aMux;
     if(aErr) throw aErr;
   }
   onProgress(0.98, "Exporting");
-  muxer.finalize();
-  return new Blob([target.buffer], { type: "video/mp4" });
+  await output.finalize();
+  const buffer = output.target.buffer;
+  if(!buffer) throw new Error("muxer produced no data");
+  return new Blob([buffer], { type: "video/mp4" });
 }

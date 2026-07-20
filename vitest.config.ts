@@ -1,3 +1,4 @@
+/// <reference types="@vitest/browser/providers/playwright" />
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -18,7 +19,17 @@ export default defineConfig({
             enabled: true,
             provider: "playwright",
             headless: true,
-            instances: [{ browser: "chromium" }],
+            instances: [
+              {
+                browser: "chromium",
+                launch: {
+                  // the default chromium-headless-shell build lacks working
+                  // video encoders (VideoEncoder crashes the tab) — use the
+                  // FULL chromium build in new-headless mode instead
+                  channel: "chromium",
+                },
+              },
+            ],
           },
         },
       },

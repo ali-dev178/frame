@@ -5,6 +5,29 @@ import { drawAtTime, outDims } from "../render/sequence";
 import { S, hasAudio, totalDur } from "../state";
 import { $ } from "../ui/dom";
 
+/**
+ * AAC bitrates to try, highest first. Platform encoders cap out below the
+ * app's Ultra 320k — e.g. Windows Media Foundation refuses stereo AAC
+ * above 192k — so the exporter negotiates downward instead of failing
+ * over to slow real-time recording.
+ */
+export function aacBitrateLadder(want: number): number[] {
+  const ladder = [want, 256000, 192000, 160000, 128000, 96000];
+  return ladder.filter(function(v, i){ return ladder.indexOf(v) === i && v > 0; });
+}
+
+/** Highest AAC bitrate the platform encoder accepts, or null if none. */
+export async function pickAacBitrate(sampleRate: number, channels: number, want: number): Promise<number | null> {
+  const ladder = aacBitrateLadder(want);
+  for(let i=0;i<ladder.length;i++){
+    try{
+      const r = await AudioEncoder.isConfigSupported({ codec: "mp4a.40.2", sampleRate: sampleRate, numberOfChannels: channels, bitrate: ladder[i] });
+      if(r && r.supported) return ladder[i];
+    }catch(e){ /* try the next rung */ }
+  }
+  return null;
+}
+
 /** Probes H.264 codec strings from best to broadest and returns the first supported. */
 export function pickAvc(W: number, H: number, bitrate: number): Promise<string | null> {
   const list = ["avc1.640033","avc1.640032","avc1.640028","avc1.64001f","avc1.4d0028","avc1.42e01e"];
@@ -60,12 +83,14 @@ export async function exportFast(onProgress: (f: number, label: string) => void)
 
   if(audioPlan){
     onProgress(0.9, "Exporting");
+    const aBitrate = await pickAacBitrate(audioPlan.sampleRate, 2, q.a);
+    if(aBitrate === null) throw new Error("no supported AAC config"); // → honest real-time fallback
     let aErr: unknown = null;
     const aenc = new AudioEncoder({
       output: function(chunk, meta){ muxer.addAudioChunk(chunk, meta); },
       error: function(e){ aErr = e; }
     });
-    aenc.configure({ codec: "mp4a.40.2", sampleRate: audioPlan.sampleRate, numberOfChannels: 2, bitrate: q.a });
+    aenc.configure({ codec: "mp4a.40.2", sampleRate: audioPlan.sampleRate, numberOfChannels: 2, bitrate: aBitrate });
     const step = 4800, L = audioPlan.left, R = audioPlan.right;
     for(let off=0; off<L.length; off += step){
       if(aErr) throw aErr;

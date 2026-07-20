@@ -4,6 +4,7 @@ import { fmtTime } from "../core/names";
 import { exportFast } from "../export/fast";
 import { exportRecord } from "../export/record";
 import { REC, hasAEnc, hasVEnc } from "../export/capabilities";
+import { platform } from "../platform";
 import { drawAtTime, outDims } from "../render/sequence";
 import { S, app, byId, curTarget, hasAudio, totalDur } from "../state";
 import type { Item } from "../types";
@@ -124,9 +125,12 @@ export function drawPreviewFrame(): void {
 }
 
 /* ---------- result area ---------- */
+let resultBlob: Blob | null = null;
+
 export function invalidateResult(): void {
   if(app.vbusy) return;
   pvPause();
+  resultBlob = null;
   if(app.resultUrl){ URL.revokeObjectURL(app.resultUrl); app.resultUrl = null; }
   $("result").style.display = "none";
   const st = $("resultStage");
@@ -135,6 +139,7 @@ export function invalidateResult(): void {
   $("resultInfo").textContent = "";
 }
 function invalidateResultForce(): void {
+  resultBlob = null;
   if(app.resultUrl){ URL.revokeObjectURL(app.resultUrl); app.resultUrl = null; }
   const st = $("resultStage");
   Array.from(st.querySelectorAll("canvas,video")).forEach(function(n){ n.remove(); });
@@ -164,6 +169,7 @@ function exportName(ext: string): string {
   return base + "_" + curTarget().suffix + (app.seq.length > 1 ? "_slideshow" : "") + "." + ext;
 }
 function finishExport(blob: Blob, ext: string, engineLabel: string): void {
+  resultBlob = blob;
   app.resultUrl = URL.createObjectURL(blob); app.resultExt = ext;
   const st = $("resultStage");
   Array.from(st.querySelectorAll("canvas")).forEach(function(n){ n.remove(); });
@@ -175,9 +181,11 @@ function finishExport(blob: Blob, ext: string, engineLabel: string): void {
   const dl = $("dlResult");
   dl.style.display = "";
   dl.onclick = function(){
-    const a = document.createElement("a");
-    a.href = app.resultUrl!; a.download = exportName(app.resultExt);
-    document.body.appendChild(a); a.click(); a.remove();
+    if(!resultBlob) return;
+    platform.saveBlob(resultBlob, exportName(app.resultExt)).then(function(r){
+      // a failed save of the export must never look like success
+      if(r === "failed") $("resultInfo").textContent = "Couldn't save the video — check disk space and try again.";
+    });
   };
 }
 

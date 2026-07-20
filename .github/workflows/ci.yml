@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # desktop mode also builds the web renderer, plus main + preload —
+      # so the vite-plugin-electron output contract breaks a PR, not a release
+      - run: npm run build:desktop
+      - name: Assert desktop build artifacts
+        run: |
+          test -f dist/index.html
+          test -f dist-electron/main.js
+          test -f dist-electron/preload.cjs
+      - run: npm test

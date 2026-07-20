@@ -1,0 +1,40 @@
+appId: dev.alidev.frame
+productName: Frame
+directories:
+  output: release
+files:
+  - dist/**
+  - dist-electron/**
+npmRebuild: false
+
+# harden the shipped binaries — the app never needs Node CLI modes
+electronFuses:
+  runAsNode: false
+  enableNodeCliInspectArguments: false
+  enableNodeOptionsEnvironmentVariable: false
+  onlyLoadAppFromAsar: true
+  resetAdHocDarwinSignature: true
+
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: true
+  deleteAppDataOnUninstall: false
+
+mac:
+  category: public.app-category.photography
+  # "-" = explicit ad-hoc signature (electron-builder 26 skips signing entirely
+  # on identity: null — no ad-hoc fallback). Hardened runtime needs a real
+  # Developer ID cert, so it must be off for ad-hoc. Revisit when joining the
+  # Apple Developer Program.
+  identity: "-"
+  hardenedRuntime: false
+  target:
+    - target: dmg
+      arch: universal
+    - target: zip
+      arch: universal
+
+publish:
+  provider: github

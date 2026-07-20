@@ -1,5 +1,7 @@
 import { computeColors } from "../core/colors";
 import { outName, passName } from "../core/names";
+import { platform } from "../platform";
+import type { SaveJob, SaveOutcome } from "../platform";
 import { buildCanvas } from "../render/frame";
 import { S, app, curTarget } from "../state";
 import type { Item } from "../types";
@@ -70,7 +72,16 @@ function createCard(it: Item): void {
   pick.addEventListener("change", function(){
     setSelected(it, pick.checked);
   });
-  (card.querySelector(".dl") as HTMLButtonElement).onclick = function(){ downloadItem(it); };
+  const dlBtn = card.querySelector(".dl") as HTMLButtonElement;
+  dlBtn.onclick = function(){
+    downloadItem(it).then(function(r){
+      if(r === "failed"){
+        const old = dlBtn.textContent;
+        dlBtn.textContent = "Save failed";
+        setTimeout(function(){ dlBtn.textContent = old; }, 1800);
+      }
+    });
+  };
   (card.querySelector(".rm") as HTMLButtonElement).onclick = function(){
     if(app.vbusy) return;
     setSelected(it, false);
@@ -171,33 +182,39 @@ function verifyItem(it: Item): void {
   }, 30);
 }
 
-export function downloadItem(it: Item): Promise<void> {
-  return new Promise(function(resolve){
-    if(it.passthrough && it.file){
-      // already the target shape: hand over the original file, byte-for-byte
-      const purl = URL.createObjectURL(it.file);
-      const pa = document.createElement("a");
-      pa.href = purl; pa.download = passName(it);
-      document.body.appendChild(pa); pa.click(); pa.remove();
-      setTimeout(function(){ URL.revokeObjectURL(purl); resolve(); }, 400);
-      return;
-    }
-    if(!it.canvas){ resolve(); return; }
-    it.canvas.toBlob(function(blob){
-      if(!blob){ resolve(); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = outName(it);
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function(){ URL.revokeObjectURL(url); resolve(); }, 400);
-    }, "image/png");
+function canvasToBlob(cv: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise(function(res){ cv.toBlob(res, "image/png"); });
+}
+
+export function downloadItem(it: Item): Promise<SaveOutcome> {
+  if(it.passthrough && it.file){
+    // already the target shape: hand over the original file, byte-for-byte
+    return platform.saveBlob(it.file, passName(it));
+  }
+  if(!it.canvas) return Promise.resolve("canceled");
+  return canvasToBlob(it.canvas).then(function(blob){
+    if(!blob) return "failed" as const;
+    return platform.saveBlob(blob, outName(it));
   });
 }
 
 async function downloadAll(): Promise<void> {
-  for(let i=0;i<app.items.length;i++){
-    await downloadItem(app.items[i]);
-    await new Promise(function(r){ setTimeout(r, 350); });
+  const jobs: SaveJob[] = app.items.map(function(it){
+    return {
+      // name + blob are decided in the same instant (and re-check membership,
+      // so an item removed mid-batch is skipped like the original loop did)
+      make: function(){
+        if(app.items.indexOf(it) < 0) return Promise.resolve(null);
+        if(it.passthrough && it.file) return Promise.resolve({ blob: it.file as Blob, name: passName(it) });
+        if(!it.canvas) return Promise.resolve(null);
+        const name = outName(it);
+        return canvasToBlob(it.canvas).then(function(blob){ return blob ? { blob: blob, name: name } : null; });
+      },
+    };
+  });
+  const r = await platform.saveMany(jobs);
+  if(r.failed > 0){
+    countEl.textContent = r.saved + " saved · " + r.failed + " failed — check disk space or folder permissions";
   }
 }
 

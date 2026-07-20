@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  # manual dry run: builds + smokes on both runners WITHOUT publishing —
+  # run this once before the first tag (and after runner-affecting changes)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # pre-create the draft once so the two matrix legs never race to create it
+  create-release:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check tag matches package version
+        shell: bash
+        run: |
+          pkg="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$pkg" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $pkg" >&2
+            exit 1
+          fi
+      - name: Create draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"
+
+  build:
+    needs: [create-release]
+    # workflow_dispatch skips create-release; don't let the skip cancel the build
+    if: always() && (needs.create-release.result == 'success' || github.ref_type != 'tag')
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      # unsigned builds — never attempt certificate discovery
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:desktop
+      # verify the fast-export pipeline (H.264 + AAC WebCodecs), the preload
+      # bridge, and renderer boot inside THIS Electron on THIS OS before
+      # shipping an installer
+      - run: npx electron . --smoke
+      - name: Package (dry run)
+        if: github.ref_type != 'tag'
+        run: npx electron-builder --publish never
+      - name: Package & publish
+        if: github.ref_type == 'tag'
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

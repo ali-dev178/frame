@@ -15,13 +15,19 @@ historical baseline. Do not edit it; the live code is `index.html` + `src/`.
 
 ## Commands
 
-- `npm run dev` — Vite dev server (the whole dev loop; open the printed URL)
-- `npm run build` — typecheck (`tsc --noEmit`) then production build to `dist/`
-- `npm run typecheck` — TypeScript only
+- `npm run dev` — Vite dev server, pure web (the main dev loop)
+- `npm run dev:desktop` — same app inside an Electron window (hot reload included)
+- `npm run build` / `npm run build:desktop` — typecheck + production build (`dist/`, plus
+  `dist-electron/` for desktop)
+- `npm run smoke:desktop` — headless Electron probe: verifies secure context, preload bridge,
+  H.264 VideoEncoder, and the AAC bitrate ladder. CI runs this before packaging installers.
+- `npm run dist` — build a desktop installer locally (`release/`)
 - `npm test` — all tests once; `npm run test:watch` for watch mode
 - Run a single test file: `npx vitest run tests/unit/layout.test.ts`
 - Browser-mode tests (`tests/browser/`) run in real headless Chromium via Playwright
   (`npx playwright install chromium` if the browser is missing). Unit tests (`tests/unit/`) run in node.
+- Releases: push a `v*` tag → GitHub Actions builds Win (NSIS) + Mac (dmg/zip universal,
+  unsigned) and attaches them to a GitHub Release.
 
 Target browser is recent Chrome/Edge (WebCodecs). The code degrades honestly on others.
 
@@ -52,8 +58,18 @@ src/
 ├── render/          fills (margin painters), frame (buildCanvas), sequence (drawAtTime)
 ├── audio/           Web Audio: scheduling, fade envelope, offline mixdown
 ├── export/          capabilities probe, WebCodecs fast path, MediaRecorder fallback
+├── platform/        THE only browser-vs-desktop split: saveBlob/saveMany adapter
 └── ui/              dom helpers, controls, cards+dropzone, studio, timeline editor, soundtrack
+electron/            desktop shell: main (window+IPC+smoke probe), preload (frameNative bridge)
 ```
+
+**Desktop specifics:** one Vite codebase, two modes (`--mode desktop` adds the Electron
+plugin; web build stays pure). The renderer detects desktop by the presence of
+`window.frameNative` (contextBridge), never by user-agent. Saves go through
+`src/platform/index.ts` — browser = `<a download>`, desktop = native dialogs over IPC
+(`frame:save-file`, `frame:pick-dir` + `frame:write-file` with a picked-dir allowlist).
+AAC export bitrate is negotiated down a ladder (`pickAacBitrate`) because platform
+encoders cap below 320k (Windows MF: 192k stereo max) — don't hardcode AAC bitrates.
 
 Key design points that span files:
 

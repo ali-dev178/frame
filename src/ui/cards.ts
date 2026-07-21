@@ -8,7 +8,7 @@ import { buildCanvas } from "../render/frame";
 import { S, app, curTarget } from "../state";
 import type { Item } from "../types";
 import { $ } from "./dom";
-import { invalidateResult, setSelected, studioOnFrameChange, toggleVideo, updateSelUI } from "./studio";
+import { invalidateResult, setSelected, studioOnFrameChange, updateSelUI } from "./studio";
 import { renderTimeline } from "./timeline";
 
 const grid = $("grid"), empty = $("empty"), bar = $("bar"), countEl = $("count");
@@ -35,7 +35,7 @@ export function initCards(): void {
 
   $("clear").onclick = function(){ if(app.vbusy) return; app.items = []; app.seq = []; grid.innerHTML=""; clearHistory(); invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
   $("dlAll").onclick = downloadAll;
-  $("toggleVideo").onclick = toggleVideo;
+  $("sideAdd").onclick = function(){ file.click(); }; // sidebar "Add photos"
 }
 
 function addFiles(list: FileList): void {
@@ -235,7 +235,7 @@ export function syncBars(): void {
   empty.style.display = n ? "none" : "";
   (bar as HTMLElement & { hidden: boolean }).hidden = !n;
   countEl.textContent = n + (n===1 ? " photo" : " photos") + " ready";
-  // the video editor is opt-in (studio.ts setVideoOpen) — not tied to photo count,
-  // so framing stays clean until you choose to make a video
+  $("phototally").textContent = n ? (n + (n===1 ? " photo" : " photos")) : "No photos yet";
+  // the video panel's visibility is owned by the sidebar mode (src/ui/mode.ts)
   updateSelUI();
 }

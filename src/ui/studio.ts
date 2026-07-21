@@ -58,22 +58,6 @@ export function studioOnFrameChange(): void {
   invalidateResult();
 }
 
-/* ---------- the video editor is opt-in and shown ALONGSIDE framing ---------- */
-// Framing, the photo grid, and "add more" always stay visible; this only
-// reveals/hides the video editor below them, so both can be used together.
-let videoOpen = false;
-export function isVideoOpen(): boolean { return videoOpen; }
-export function setVideoOpen(open: boolean): void {
-  videoOpen = open;
-  $("videoPanel").style.display = open ? "" : "none";
-  const t = $("toggleVideo");
-  if(t) t.textContent = open ? "Hide video editor" : "Make a video";
-  if(open) renderTimeline(); // the timeline can only size itself once visible
-}
-export function toggleVideo(): void {
-  setVideoOpen(!videoOpen);
-  if(videoOpen) $("videoPanel").scrollIntoView({ behavior: "smooth", block: "start" });
-}
 
 /**
  * The transition-duration slider is global (S.transDur applies to ALL
@@ -300,7 +284,6 @@ export function initStudio(): void {
   });
   vfade.onchange = function(){ S.vfade = vfade.checked; invalidateResult(); markDirty(); };
 
-  $("hideVideo").onclick = function(){ setVideoOpen(false); };
   $("pvPlayBtn").onclick = function(){ if(pv.playing) pvPause(); else pvPlay(); };
 
   // frame-perfect still of the playhead moment — e.g. a reel cover that

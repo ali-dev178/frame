@@ -10,21 +10,27 @@
 <meta name="theme-color" content="#15140f">
 </head>
 <body>
-<div class="wrap">
-  <header>
+<div class="shell">
+  <aside class="sidebar">
     <div class="brand">
       <span class="mark">Frame<span class="dot">.</span></span>
-      <span class="tag">frame a photo for any social format — then turn it into a video with your music, in one place</span>
+      <span class="stag">photos &amp; video · in your browser</span>
     </div>
-    <p class="lede">Drop in a phone-sized photo and it's centered inside the frame you pick, with the empty space filled by colors pulled from the picture itself. <b>Your photo is placed at its exact original resolution and saved as lossless PNG — the picture area is never resized, cropped, or recompressed.</b> Everything runs in your browser; nothing is uploaded anywhere.</p>
-  </header>
+    <nav class="nav" aria-label="Workspace">
+      <button type="button" class="navitem on" id="navFrame" aria-current="page"><span class="navico">▦</span> Frame photos</button>
+      <button type="button" class="navitem" id="navVideo"><span class="navico">►</span> Make a video</button>
+    </nav>
+    <div class="navfoot">
+      <div class="phototally" id="phototally">No photos yet</div>
+      <button type="button" class="btn side-add" id="sideAdd">+ Add photos</button>
+    </div>
+  </aside>
 
-  <div class="panel">
-    <p class="ptitle">Step 1 · Frame the photos</p>
-    <div class="tabs" id="tabs" role="tablist" aria-label="Target format"></div>
-    <div class="rows">
-      <div class="field" id="targetField">
-        <span class="lbl">Target</span>
+  <main class="workspace">
+    <div class="topbar" id="topbar">
+      <div class="tabs" id="tabs" role="tablist" aria-label="Target format"></div>
+      <div class="fmtrow">
+        <span class="lbl">Format</span>
         <div class="seg" id="segTarget" role="group" aria-label="Target size"></div>
         <div class="fixedfmt" id="targetChip" style="display:none"></div>
         <div class="solidrow" id="customSize" style="display:none">
@@ -34,7 +40,12 @@
         </div>
         <span class="sub" id="targetHint"></span>
       </div>
+    </div>
 
+    <div class="panel" id="framePanel">
+      <p class="ptitle">Frame the photos</p>
+      <p class="lede">Each photo is centered inside the frame you pick, the empty space filled with colors from the picture itself. <b>Your photo stays at its exact original resolution and saves as lossless PNG — never resized, cropped, or recompressed.</b> Everything runs in your browser; nothing is uploaded.</p>
+      <div class="rows">
       <div class="field">
         <span class="lbl">Side fill</span>
         <div class="seg" id="segMode" role="group" aria-label="Side fill style"></div>
@@ -96,7 +107,6 @@
   <div class="bar" id="bar" hidden>
     <span class="count" id="count"></span>
     <div class="actions">
-      <button class="btn accent" id="toggleVideo">Make a video</button>
       <button class="btn primary" id="dlAll">Download all images</button>
       <button class="btn ghost" id="clear">Clear</button>
     </div>
@@ -106,7 +116,7 @@
   <div class="empty" id="empty">No photos yet — add some above to see them framed.</div>
 
   <div class="panel" id="videoPanel" style="display:none">
-    <p class="ptitle">Make a video <span class="fmt" id="fmtLine"></span> <button class="btn ghost vhide" id="hideVideo" type="button">Hide</button></p>
+    <p class="ptitle">Make a video <span class="fmt" id="fmtLine"></span></p>
 
     <div class="stitle">Clips <span class="sub2" id="seqInfo"></span>
       <span class="tlbtns">
@@ -245,12 +255,13 @@
       </div>
     </div>
   </div>
+  </main>
+</div>
 
   <footer>
     <b>How the quality is preserved:</b> the original image is drawn into the canvas at a 1:1 pixel scale (no interpolation) and saved as PNG, which is lossless. For a standard photo without transparency, the picture area comes out pixel-identical to the file you put in. If a photo already matches the selected shape, the tool detects it, adds nothing, and downloading hands you the original file byte-for-byte — same format, same metadata, completely untouched. Platforms still apply their own compression when you upload — that part is outside any tool's control, but the file you hand them here is untouched.
     <br><br><b>About the video export:</b> where the browser supports it (recent Chrome and Edge), export merges your frames and music directly into the MP4 with WebCodecs — no real-time recording, so a 60-second video takes only a few seconds. The MP4 muxing library ships inside the app, so export works fully offline. On browsers without WebCodecs the tool honestly falls back to real-time recording and says so. A single Still clip is copied 1:1 with zero resampling (odd dimensions get one duplicated edge row/column, never a removed one); captions and color looks draw over the frame by definition, and frames inside a transition window are blends of two clips — so choose Cut, Look: None, and no caption when strict frame-copies matter. Mixing clips of different sizes in one video scales the smaller ones up to the largest — for absolute crispness, use same-size clips. Video is a compressed format by nature, so it can't be bit-for-bit lossless like the PNG, but at Ultra (40 Mbps H.264, up to 320 kbps AAC — capped at what your system's encoder supports) a still image is far beyond any visible difference; your music is re-encoded to AAC, transparent at these bitrates.
   </footer>
-</div>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

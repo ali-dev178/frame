@@ -7,7 +7,8 @@ import { MAX_CLIP, S, app } from "../state";
 import type { Clip, Item, Settings, TitleCard } from "../types";
 import { loadFile, syncBars } from "./cards";
 import { initControls } from "./controls";
-import { initStudio, setVideoOpen, syncItemSelection, updateSelUI } from "./studio";
+import { initStudio, syncItemSelection, updateSelUI } from "./studio";
+import { setMode } from "./mode";
 import { renderTimeline } from "./timeline";
 import { refreshAudioUI } from "./soundtrack";
 
@@ -96,8 +97,8 @@ function showBar(saved: SavedProject): void {
     '<span class="spacer"></span>' +
     '<button type="button" class="btn primary" id="restoreYes">Restore</button>' +
     '<button type="button" class="btn ghost" id="restoreNo">Dismiss</button>';
-  const wrap = document.querySelector(".wrap")!;
-  wrap.insertBefore(bar, wrap.children[1]); // right under the header
+  const shell = document.querySelector(".shell")!;
+  shell.parentNode!.insertBefore(bar, shell); // full-width banner above the app shell
   (bar.querySelector("#restoreNo") as HTMLButtonElement).onclick = function () {
     bar.remove();
     armAutosave(); // dismissed: the next real edit replaces the old session
@@ -178,7 +179,7 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
   syncBars();
   renderTimeline();
   updateSelUI();
-  if(app.seq.length) setVideoOpen(true); // a restored session with a video re-opens the editor
+  if(app.seq.length) setMode("video"); // a restored session with a video opens that workspace
   clearHistory(); // the restored state is the new baseline — nothing to undo into
   return failures;
 }

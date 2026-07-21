@@ -135,20 +135,22 @@
         <div class="playhead" id="playhead"></div>
       </div>
     </div>
-    <!-- contextual: shown when a photo clip is selected -->
+    <!-- contextual: shown when a photo clip / title card is selected -->
     <div class="cliptool" id="cliptool" style="display:none">
       <span class="sub tfull" id="cliptoolLbl"></span>
+      <span class="tgrp"><span class="tlab">Length</span>
+        <button class="cbtn" id="ctM" title="1 second shorter">−</button>
+        <input type="number" class="cdur-in" id="ctDur" min="1" max="600" step="1" title="How long this clip shows, in seconds">
+        <span class="usub">s</span>
+        <button class="cbtn" id="ctP" title="1 second longer">+</button>
+      </span>
       <span class="tgrp"><span class="tlab">Order</span>
         <button class="cbtn" id="ctL" title="Move earlier">◀</button>
         <button class="cbtn" id="ctR" title="Move later">▶</button>
       </span>
-      <span class="tgrp"><span class="tlab">Length</span>
-        <button class="cbtn" id="ctM" title="1 second shorter">−</button>
-        <button class="cbtn" id="ctP" title="1 second longer">+</button>
-      </span>
       <span class="tgrp">
-        <button class="cbtn" id="ctD" title="Duplicate clip (D)">⧉</button>
-        <button class="cbtn" id="ctX" title="Remove clip (Del)">✕</button>
+        <button class="cbtn ctext" id="ctD" title="Duplicate this clip (D)">⧉ Duplicate</button>
+        <button class="cbtn ctext danger" id="ctX" title="Remove this clip (Delete)">✕ Delete</button>
       </span>
       <span class="tgrp" id="ctStyleGrp"><span class="tlab">Style</span>
         <select class="csel" id="ctMotion" title="Motion for this clip"></select>
@@ -166,9 +168,9 @@
     <div class="cliptool" id="audiotool" style="display:none">
       <span class="sub tfull" id="audiotoolLbl"></span>
       <span class="tgrp">
-        <button class="cbtn" id="atS" title="Split at the playhead (S)">✂</button>
-        <button class="cbtn" id="atD" title="Duplicate (D)">⧉</button>
-        <button class="cbtn" id="atX" title="Remove (Del)">✕</button>
+        <button class="cbtn ctext" id="atS" title="Split at the playhead (S)">✂ Split</button>
+        <button class="cbtn ctext" id="atD" title="Duplicate (D)">⧉ Duplicate</button>
+        <button class="cbtn ctext danger" id="atX" title="Remove (Delete)">✕ Delete</button>
       </span>
       <span class="tgrp"><span class="tlab">Volume</span>
         <input type="range" id="atVol" class="atvol" min="0" max="100" step="1" title="Volume of this audio piece">

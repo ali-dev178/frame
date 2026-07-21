@@ -1,7 +1,7 @@
 import { ensureCtx } from "../audio/engine";
 import { op } from "../core/history";
 import { fmtTime, round10 } from "../core/names";
-import { app, hasAudio, nextLane, sndExtent, totalDur } from "../state";
+import { MAX_CLIP, app, hasAudio, nextLane, sndExtent, totalDur } from "../state";
 import type { AudioTrack } from "../types";
 import { $ } from "./dom";
 import { invalidateResult, pv, updateSelUI } from "./studio";
@@ -23,15 +23,15 @@ export function initSoundtrack(): void {
   $("fitMusic").onclick = function(){
     if(!hasAudio() || !app.seq.length){ const m=$("music"); m.style.borderColor="var(--warn)"; setTimeout(function(){ m.style.borderColor="var(--line)"; },700); return; }
     op(function(){
-      const target = Math.min(90, Math.max(1, Math.round(sndExtent())));
+      const target = Math.min(MAX_CLIP * app.seq.length, Math.max(1, Math.round(sndExtent())));
       const now = totalDur();
       let acc = 0;
       app.seq.forEach(function(c){
-        c.dur = Math.max(1, Math.min(60, Math.round(c.dur * target / now)));
+        c.dur = Math.max(1, Math.min(MAX_CLIP, Math.round(c.dur * target / now)));
         acc += c.dur;
       });
       const drift = target - acc;
-      app.seq[app.seq.length-1].dur = Math.max(1, Math.min(60, app.seq[app.seq.length-1].dur + drift));
+      app.seq[app.seq.length-1].dur = Math.max(1, Math.min(MAX_CLIP, app.seq[app.seq.length-1].dur + drift));
     });
     renderTimeline(); updateSelUI(); invalidateResult();
   };

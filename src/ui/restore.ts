@@ -3,7 +3,7 @@ import { FORMATS, LOOKS, MKEYS, MOTIONS, TRANSITIONS, VQUAL } from "../core/conf
 import { clearHistory } from "../core/history";
 import { armAutosave, loadSaved, markDirty } from "../core/project";
 import type { SavedClip, SavedProject } from "../core/project";
-import { S, app } from "../state";
+import { MAX_CLIP, S, app } from "../state";
 import type { Clip, Item, Settings, TitleCard } from "../types";
 import { loadFile, syncBars } from "./cards";
 import { initControls } from "./controls";
@@ -135,7 +135,7 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
 
   // clips: rebuild the timeline directly (duplicates allowed), clamped on ingestion
   saved.seq.forEach(function (c) {
-    const dur = Math.max(1, Math.min(60, Math.round(Number(c.dur)) || 4));
+    const dur = Math.max(1, Math.min(MAX_CLIP, Math.round(Number(c.dur)) || 4));
     if (c.card) { // title card — no source photo
       const clip: Clip = { uid: ++app.clipIdc, id: 0, dur: dur, card: sanitizeCard(c.card) };
       applyClipOverrides(clip, c);

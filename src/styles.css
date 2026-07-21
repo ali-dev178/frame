@@ -225,7 +225,10 @@ footer b{color:var(--muted)}
 .csel{appearance:none;border:1px solid var(--line-2);background:var(--panel);color:var(--ink);border-radius:7px;height:28px;font-size:12px;padding:0 6px;cursor:pointer;max-width:130px}
 .csel:hover{border-color:var(--brass)}
 .csel:disabled{opacity:.35;cursor:default}
-.cbtn.ctext{width:auto;padding:0 10px;font-size:12px}
+.cbtn.ctext{width:auto;padding:0 11px;font-size:12px;font-weight:500}
+.cbtn.danger:hover{border-color:#c0392b;color:#e57368}
+.cdur-in{width:50px;text-align:center;background:var(--panel-2);border:1px solid var(--line-2);border-radius:7px;color:var(--ink);font:inherit;font-size:13px;padding:4px 4px;font-variant-numeric:tabular-nums}
+.usub{font-size:11px;color:var(--muted-2)}
 .ccolor{width:34px;height:28px;border:1px solid var(--line-2);border-radius:7px;background:var(--panel);cursor:pointer;padding:2px}
 .ccolor::-webkit-color-swatch{border:none;border-radius:4px}
 .ccolor::-webkit-color-swatch-wrapper{padding:0}

@@ -1,6 +1,9 @@
 import { targetDef } from "./core/config";
 import type { AudioTrack, Clip, Item, Settings, Target } from "./types";
 
+/** Longest a single clip may show, in seconds (10 minutes). */
+export const MAX_CLIP = 600;
+
 export const S: Settings = {
   tab: "insta",
   targetByTab: { insta: "ig-4x5", tiktok: "tiktok", yt: "shorts", x: "x-169", fb: "fb-191", li: "li-191", custom: "custom" },

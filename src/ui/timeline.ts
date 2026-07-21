@@ -2,7 +2,7 @@ import { LOOKS, MOTIONS, TRANSITIONS } from "../core/config";
 import { beginOp, commitOp, op } from "../core/history";
 import { fmtTime, shortName } from "../core/names";
 import { markDirty } from "../core/project";
-import { S, app, byId, totalDur, trackById } from "../state";
+import { MAX_CLIP, S, app, byId, totalDur, trackById } from "../state";
 import type { AudioTrack, Clip, OptionDef } from "../types";
 import { $ } from "./dom";
 import { drawPreviewFrame, invalidateResult, invalidateResultQuiet, pv, pvSeek, setSelected, syncItemSelection, syncTransDurUI, updatePvTime, updateSelUI } from "./studio";
@@ -250,7 +250,7 @@ function startResize(e: PointerEvent, clip: Clip, clipStart: number, el: HTMLEle
     const r = $("tlinner").getBoundingClientRect();
     const x = evX(ev) - r.left - 8;
     let nd = Math.round(x / tlPps - clipStart);
-    nd = Math.max(1, Math.min(60, nd));
+    nd = Math.max(1, Math.min(MAX_CLIP, nd));
     if(nd !== clip.dur){
       clip.dur = nd;
       el.style.width = Math.max(6, clip.dur*tlPps) + "px";
@@ -388,6 +388,8 @@ function showClipTool(): void {
     : "Clip " + (i+1) + (it ? " · " + it.name : "") + " · " + clip.dur + "s";
   $<HTMLButtonElement>("ctL").disabled = (i === 0);
   $<HTMLButtonElement>("ctR").disabled = (i === app.seq.length - 1);
+  const durIn = $<HTMLInputElement>("ctDur");
+  if(document.activeElement !== durIn) durIn.value = String(clip.dur);
   // motion & look are photo-only; a title card gets text + colors instead
   $<HTMLSelectElement>("ctMotion").style.display = isCard ? "none" : "";
   $<HTMLSelectElement>("ctLook").style.display = isCard ? "none" : "";
@@ -500,7 +502,17 @@ export function initTimeline(): void {
   $("ctL").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<1) return; op(function(){ const t=app.seq[i-1]; app.seq[i-1]=app.seq[i]; app.seq[i]=t; }); renderTimeline(); invalidateResult(); showClipTool(); };
   $("ctR").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0||i>=app.seq.length-1) return; op(function(){ const t=app.seq[i+1]; app.seq[i+1]=app.seq[i]; app.seq[i]=t; }); renderTimeline(); invalidateResult(); showClipTool(); };
   $("ctM").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; op(function(){ app.seq[i].dur=Math.max(1,app.seq[i].dur-1); }); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
-  $("ctP").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; op(function(){ app.seq[i].dur=Math.min(60,app.seq[i].dur+1); }); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
+  $("ctP").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; op(function(){ app.seq[i].dur=Math.min(MAX_CLIP,app.seq[i].dur+1); }); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
+  const ctDur = $<HTMLInputElement>("ctDur");
+  ctDur.onfocus = function(){ beginOp(); };
+  ctDur.onblur = function(){ commitOp(); renderTimeline(); showClipTool(); };
+  ctDur.oninput = function(){
+    const i = selClipIdx(); if(app.vbusy || i < 0) return;
+    const v = Math.round(+ctDur.value);
+    if(!v) return; // let the field be empty mid-typing
+    app.seq[i].dur = Math.max(1, Math.min(MAX_CLIP, v));
+    drawPreviewFrame(); updateSelUI(); invalidateResultQuiet(); markDirty();
+  };
   $("ctD").onclick = function(){
     const i=selClipIdx(); if(app.vbusy||i<0) return;
     op(function(){

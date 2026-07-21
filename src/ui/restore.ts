@@ -1,5 +1,5 @@
 import { ensureCtx } from "../audio/engine";
-import { FORMATS, LOOKS, MKEYS, MOTIONS, TRANSITIONS, VQUAL } from "../core/config";
+import { FORMATS, LOOKS, MKEYS, MOTIONS, PHOTOFITS, TRANSITIONS, VQUAL } from "../core/config";
 import { clearHistory } from "../core/history";
 import { armAutosave, loadSaved, markDirty } from "../core/project";
 import type { SavedClip, SavedProject } from "../core/project";
@@ -53,6 +53,7 @@ function applySettings(stored: Settings | undefined): void {
   if (!LOOKS.some(function (l) { return l.key === merged.look; })) merged.look = S.look;
   if (!TRANSITIONS.some(function (t) { return t.key === merged.trans; })) merged.trans = S.trans;
   if (!MOTIONS.some(function (m) { return m.key === merged.motion; })) merged.motion = S.motion;
+  if (!PHOTOFITS.some(function (f) { return f.key === merged.vfit; })) merged.vfit = S.vfit;
   if (!VQUAL.some(function (q) { return q.key === merged.vq; })) merged.vq = S.vq;
   merged.blur = clampNum(merged.blur, 0, 100, S.blur);
   merged.dark = clampNum(merged.dark, 0, 100, S.dark);

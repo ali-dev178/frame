@@ -47,6 +47,8 @@ export interface Settings {
   customW: number;
   customH: number;
   motion: string;
+  /** How photos fill the video frame: "framed" | "fill" | "fit". */
+  vfit: string;
   vq: string;
   vfade: boolean;
   trans: string;

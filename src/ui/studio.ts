@@ -1,5 +1,5 @@
 import { applyFadesFrom, ensureCtx, scheduleSegs } from "../audio/engine";
-import { LOOKS, MOTIONS, TDURS, TRANSITIONS, VQUAL } from "../core/config";
+import { LOOKS, MOTIONS, PHOTOFITS, TDURS, TRANSITIONS, VQUAL } from "../core/config";
 import { beginOp, commitOp } from "../core/history";
 import { fmtTime } from "../core/names";
 import { markDirty } from "../core/project";
@@ -244,6 +244,14 @@ export function initStudio(): void {
     const o = list.filter(function(x){return x.key===key;})[0] || list[0];
     return o.hint!;
   }
+
+  buildSeg($("segPhotoFit"), PHOTOFITS, S.vfit, function(k){
+    S.vfit = k;
+    refreshSeg($("segPhotoFit"), PHOTOFITS.map(function(x){return x.key;}), k);
+    $("photoFitHint").textContent = hintOf(PHOTOFITS, k);
+    drawPreviewFrame(); invalidateResult(); markDirty();
+  });
+  $("photoFitHint").textContent = hintOf(PHOTOFITS, S.vfit);
 
   buildSeg($("segMotion"), MOTIONS, S.motion, function(k){
     S.motion = k;

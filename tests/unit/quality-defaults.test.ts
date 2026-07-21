@@ -19,6 +19,7 @@ describe("quality defaults are pinned", () => {
     expect(S.motion).toBe("static"); // Still = 1:1 frame copies
     expect(S.trans).toBe("none");    // Cut = no blended frames
     expect(S.look).toBe("none");     // untouched color
+    expect(S.vfit).toBe("framed");   // the framed canvas is the 1:1 exact-copy source
   });
 
   it("every pixel-affecting option has an untouched choice", () => {

@@ -55,10 +55,39 @@ export function prog(b: { start: number; dur: number }, t: number): number {
   return Math.min(1, Math.max(0, (t - b.start) / b.dur));
 }
 
+/** Motion-aware scale for a given base cover/contain factor and progress. */
+function motionScale(base: number, mo: string, p: number): number {
+  if(mo === "zoomin") return base * (1 + 0.10*p);
+  if(mo === "zoomout") return base * (1.10 - 0.10*p);
+  if(mo === "pan") return base * 1.06;
+  return base;
+}
+
+/**
+ * Draw the ORIGINAL photo into the frame, ignoring the Frame-tab styling:
+ * "fill" crops the photo to cover the whole frame, "fit" letterboxes it whole.
+ */
+function drawOriginalFit(c2: CanvasRenderingContext2D, W: number, H: number, it: Item, p: number, mo: string, lk: string, fit: string): void {
+  const img = it.img;
+  const iw = it.iw, ih = it.ih;
+  const base = (fit === "fit") ? Math.min(W/iw, H/ih) : Math.max(W/iw, H/ih);
+  const s = motionScale(base, mo, p);
+  const dw = iw*s, dh = ih*s;
+  const dx = (mo === "pan") ? -(dw - W) * p : (W - dw)/2;
+  const dy = (H - dh)/2;
+  c2.fillStyle = "#000"; c2.fillRect(0, 0, W, H); // letterbox bg for "fit" (harmless for "fill")
+  c2.imageSmoothingEnabled = true; c2.imageSmoothingQuality = "high";
+  if(lk) c2.filter = lk;
+  c2.drawImage(img, dx, dy, dw, dh);
+  c2.filter = "none";
+}
+
 export function drawClipFrame(c2: CanvasRenderingContext2D, W: number, H: number, it: Item | null, p: number, motion?: string, look?: string): void {
   if(!it || !it.canvas){ c2.fillStyle="#000"; c2.fillRect(0,0,W,H); return; }
   const mo = motion || S.motion;             // per-clip override → global default
   const lk = LOOK_FILTERS[look || S.look] || "";
+  const fit = S.vfit || "framed";
+  if(fit !== "framed" && it.img){ drawOriginalFit(c2, W, H, it, p, mo, lk, fit); return; }
   const src = it.canvas;
   const cover = Math.max(W / src.width, H / src.height);
   if(mo === "static" && W >= src.width && (W - src.width) <= 1 && H >= src.height && (H - src.height) <= 1){

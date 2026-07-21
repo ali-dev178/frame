@@ -16,6 +16,7 @@ export const S: Settings = {
   customW: 1080,
   customH: 1350,
   motion: "static",
+  vfit: "framed",
   vq: "ultra",
   vfade: true,
   trans: "none",

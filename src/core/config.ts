@@ -69,6 +69,13 @@ export const MODES: OptionDef[] = [
 ];
 export const MKEYS = MODES.map(function(x){return x.key;});
 
+/** How each photo fills the video frame (independent of the Frame-tab styling). */
+export const PHOTOFITS: OptionDef[] = [
+  {key:"framed", label:"Framed",   hint:"Use the framed photo (fill margins around the untouched picture) — matches the Frame tab."},
+  {key:"fill",   label:"Fill",     hint:"Crop the ORIGINAL photo to fill the whole frame — no margins, edges may be cut."},
+  {key:"fit",    label:"Fit",      hint:"Show the whole ORIGINAL photo on a black background — nothing cropped."},
+];
+
 export const MOTIONS: OptionDef[] = [
   {key:"static", label:"Still",    hint:"Sharp, static clips — the crispest option."},
   {key:"zoomin", label:"Zoom in",  hint:"A slow push in on each clip."},

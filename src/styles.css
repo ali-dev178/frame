@@ -185,6 +185,9 @@ footer b{color:var(--muted)}
 .ruler .tick::after{content:"";position:absolute;left:50%;top:14px;width:1px;height:5px;background:var(--line-2)}
 .lane{position:relative;border-radius:8px;margin-top:6px;overflow:hidden}
 .vlane{height:64px;background:rgba(0,0,0,.25)}
+.tlzoom{display:inline-flex;gap:4px;margin-left:auto}
+.tldrop{position:absolute;top:0;width:2px;height:100%;background:var(--brass);box-shadow:0 0 6px var(--brass);pointer-events:none;z-index:6;border-radius:1px}
+.tlclip.drag{opacity:.45}
 .alane{height:38px;background:rgba(0,0,0,.25)}
 .tlclip{position:absolute;top:0;height:100%;border:1px solid var(--line-2);border-radius:8px;background-color:#000;background-size:auto 100%;background-repeat:repeat-x;cursor:pointer;box-sizing:border-box;min-width:6px}
 .tlclip.on{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass)}

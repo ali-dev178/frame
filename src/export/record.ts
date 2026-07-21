@@ -1,7 +1,7 @@
 import { applyFadesFrom, ensureCtx, scheduleSegs } from "../audio/engine";
 import { VQUAL } from "../core/config";
 import { drawAtTime, outDims } from "../render/sequence";
-import { S, hasAudio, totalDur } from "../state";
+import { S, app, hasAudio, totalDur } from "../state";
 import { $ } from "../ui/dom";
 import { REC } from "./capabilities";
 
@@ -38,10 +38,12 @@ export function exportRecord(onProgress: (f: number, label: string) => void): Pr
     try { rec = new MediaRecorder(new MediaStream(mtracks), { mimeType: fmt.m, videoBitsPerSecond: q.v, audioBitsPerSecond: q.a }); }
     catch(e){ rec = new MediaRecorder(new MediaStream(mtracks), { mimeType: fmt.m }); }
     const chunks: Blob[] = [];
+    let canceled = false;
     rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) chunks.push(ev.data); };
     rec.onstop = function(){
       liveNodes.forEach(function(n){ try{ n.stop(); }catch(e){} });
       stream.getTracks().forEach(function(t){ t.stop(); });
+      if(canceled){ reject(new Error("__cancel__")); return; } // partial recording is discarded
       resolve({ blob: new Blob(chunks, { type: fmt.m.split(";")[0] }), ext: fmt.ext });
     };
     const t0 = performance.now();
@@ -53,6 +55,7 @@ export function exportRecord(onProgress: (f: number, label: string) => void): Pr
     }
     let raf: number;
     (function loop(){
+      if(app.vcancel){ canceled = true; if(rec.state !== "inactive") rec.stop(); return; }
       const t = (performance.now() - t0) / 1000;
       drawAtTime(c2, W, H, Math.min(t, total));
       onProgress(Math.min(1, t/total), "Recording");

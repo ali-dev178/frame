@@ -188,8 +188,16 @@ function setBusy(v: boolean): void {
   $("videoPanel").classList.toggle("busy", v);
   $<HTMLButtonElement>("selAll").disabled = v;
   $<HTMLButtonElement>("pvPlayBtn").disabled = v;
-  if(v){ $<HTMLButtonElement>("exportBtn").disabled = true; }
+  const cb = $<HTMLButtonElement>("cancelExport");
+  cb.style.display = v ? "" : "none";
+  if(v){ cb.disabled = false; cb.textContent = "Cancel"; $<HTMLButtonElement>("exportBtn").disabled = true; }
   else { $("expProg").classList.remove("on"); $("expRec").classList.remove("on"); updateSelUI(); }
+}
+
+/** Canceled export: clear the in-progress stage and return to the pre-export state. */
+function afterCancel(): void {
+  invalidateResultForce();
+  $("result").style.display = "none";
 }
 
 function setFmtLine(txt: string): void { $("fmtLine").innerHTML = txt; }
@@ -311,9 +319,17 @@ export function initStudio(): void {
     commitOp();
   };
 
+  $("cancelExport").onclick = function(){
+    if(!app.vbusy) return;
+    app.vcancel = true; // the export loops (fast + record) check this and bail
+    const b = $<HTMLButtonElement>("cancelExport");
+    b.disabled = true; b.textContent = "Canceling…";
+  };
+
   $("exportBtn").onclick = async function(){
     if(app.vbusy || !app.seq.length) return;
     pvPause();
+    app.vcancel = false;
     setBusy(true);
     invalidateResultForce();
     $("result").style.display = "";
@@ -328,15 +344,21 @@ export function initStudio(): void {
         finishExport(r.blob, r.ext, "real-time recording");
       }
     }catch(e){
-      // fast path failed → honest fallback to real-time recording
-      try{
-        const r2 = await exportRecord(setProg);
-        finishExport(r2.blob, r2.ext, "real-time recording (fallback)");
-        setFmtLine('fast export unavailable — recorded in <b class="bad">real time</b> instead');
-      }catch(e2){
-        $("resultInfo").textContent = "Export failed in this browser — try a recent Chrome or Edge.";
+      if(app.vcancel){
+        afterCancel(); // user aborted — never fall back, never show failure
+      } else {
+        // fast path failed → honest fallback to real-time recording
+        try{
+          const r2 = await exportRecord(setProg);
+          finishExport(r2.blob, r2.ext, "real-time recording (fallback)");
+          setFmtLine('fast export unavailable — recorded in <b class="bad">real time</b> instead');
+        }catch(e2){
+          if(app.vcancel) afterCancel();
+          else $("resultInfo").textContent = "Export failed in this browser — try a recent Chrome or Edge.";
+        }
       }
     }
+    app.vcancel = false;
     setBusy(false);
   };
 }

@@ -2,7 +2,7 @@ import { BufferTarget, EncodedAudioPacketSource, EncodedPacket, EncodedVideoPack
 import { renderAudioOffline } from "../audio/engine";
 import { VQUAL } from "../core/config";
 import { drawAtTime, outDims } from "../render/sequence";
-import { S, hasAudio, totalDur } from "../state";
+import { S, app, hasAudio, totalDur } from "../state";
 import { $ } from "../ui/dom";
 
 /**
@@ -79,52 +79,62 @@ export async function exportFast(onProgress: (f: number, label: string) => void)
   const c2 = cv.getContext("2d")!;
   const st = $("resultStage"); st.insertBefore(cv, st.firstChild);
 
-  for(let i=0;i<frames;i++){
-    if(vErr) throw vErr;
-    drawAtTime(c2, W, H, i/fps);
-    const vf = new VideoFrame(cv, { timestamp: Math.round(i*1e6/fps), duration: Math.round(1e6/fps) });
-    venc.encode(vf, { keyFrame: (i % 60) === 0 });
-    vf.close();
-    while(venc.encodeQueueSize > 20){ await new Promise(function(r){ setTimeout(r, 4); }); }
-    if(i % 10 === 0){ onProgress(i/frames*0.85, "Exporting"); await new Promise(function(r){ setTimeout(r, 0); }); }
-  }
-  await venc.flush();
-  await vMux;
-  if(vErr) throw vErr;
-
-  if(audioPlan && audioSource){
-    onProgress(0.9, "Exporting");
-    const aBitrate = await pickAacBitrate(audioPlan.sampleRate, 2, q.a);
-    if(aBitrate === null) throw new Error("no supported AAC config"); // → honest real-time fallback
-    let aErr: unknown = null;
-    let aMux: Promise<unknown> = Promise.resolve();
-    const aenc = new AudioEncoder({
-      output: function(chunk, meta){
-        aMux = aMux
-          .then(function(){ return audioSource.add(EncodedPacket.fromEncodedChunk(chunk), meta); })
-          .catch(function(e){ if(!aErr) aErr = e; });
-      },
-      error: function(e){ aErr = e; }
-    });
-    aenc.configure({ codec: "mp4a.40.2", sampleRate: audioPlan.sampleRate, numberOfChannels: 2, bitrate: aBitrate });
-    const step = 4800, L = audioPlan.left, R = audioPlan.right;
-    for(let off=0; off<L.length; off += step){
-      if(aErr) throw aErr;
-      const n = Math.min(step, L.length - off);
-      const data = new Float32Array(n*2);
-      data.set(L.subarray(off, off+n), 0);
-      data.set(R.subarray(off, off+n), n);
-      const ad = new AudioData({ format:"f32-planar", sampleRate: audioPlan.sampleRate, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(off/audioPlan.sampleRate*1e6), data: data });
-      aenc.encode(ad); ad.close();
-      while(aenc.encodeQueueSize > 10){ await new Promise(function(r){ setTimeout(r, 4); }); }
+  // any exit — cancel, error, or success — closes both encoders in the finally;
+  // a live WebCodecs encoder holds a platform/hardware resource until closed
+  let aenc: AudioEncoder | null = null;
+  try {
+    for(let i=0;i<frames;i++){
+      if(app.vcancel) throw new Error("__cancel__");
+      if(vErr) throw vErr;
+      drawAtTime(c2, W, H, i/fps);
+      const vf = new VideoFrame(cv, { timestamp: Math.round(i*1e6/fps), duration: Math.round(1e6/fps) });
+      venc.encode(vf, { keyFrame: (i % 60) === 0 });
+      vf.close();
+      while(venc.encodeQueueSize > 20){ if(app.vcancel) throw new Error("__cancel__"); await new Promise(function(r){ setTimeout(r, 4); }); }
+      if(i % 10 === 0){ onProgress(i/frames*0.85, "Exporting"); await new Promise(function(r){ setTimeout(r, 0); }); }
     }
-    await aenc.flush();
-    await aMux;
-    if(aErr) throw aErr;
+    await venc.flush();
+    await vMux;
+    if(vErr) throw vErr;
+
+    if(audioPlan && audioSource){
+      onProgress(0.9, "Exporting");
+      const aBitrate = await pickAacBitrate(audioPlan.sampleRate, 2, q.a);
+      if(aBitrate === null) throw new Error("no supported AAC config"); // → honest real-time fallback
+      let aErr: unknown = null;
+      let aMux: Promise<unknown> = Promise.resolve();
+      aenc = new AudioEncoder({
+        output: function(chunk, meta){
+          aMux = aMux
+            .then(function(){ return audioSource.add(EncodedPacket.fromEncodedChunk(chunk), meta); })
+            .catch(function(e){ if(!aErr) aErr = e; });
+        },
+        error: function(e){ aErr = e; }
+      });
+      aenc.configure({ codec: "mp4a.40.2", sampleRate: audioPlan.sampleRate, numberOfChannels: 2, bitrate: aBitrate });
+      const step = 4800, L = audioPlan.left, R = audioPlan.right;
+      for(let off=0; off<L.length; off += step){
+        if(app.vcancel) throw new Error("__cancel__");
+        if(aErr) throw aErr;
+        const n = Math.min(step, L.length - off);
+        const data = new Float32Array(n*2);
+        data.set(L.subarray(off, off+n), 0);
+        data.set(R.subarray(off, off+n), n);
+        const ad = new AudioData({ format:"f32-planar", sampleRate: audioPlan.sampleRate, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(off/audioPlan.sampleRate*1e6), data: data });
+        aenc.encode(ad); ad.close();
+        while(aenc.encodeQueueSize > 10){ if(app.vcancel) throw new Error("__cancel__"); await new Promise(function(r){ setTimeout(r, 4); }); }
+      }
+      await aenc.flush();
+      await aMux;
+      if(aErr) throw aErr;
+    }
+    onProgress(0.98, "Exporting");
+    await output.finalize();
+    const buffer = output.target.buffer;
+    if(!buffer) throw new Error("muxer produced no data");
+    return new Blob([buffer], { type: "video/mp4" });
+  } finally {
+    try{ if(venc.state !== "closed") venc.close(); }catch(e){}
+    try{ if(aenc && aenc.state !== "closed") aenc.close(); }catch(e){}
   }
-  onProgress(0.98, "Exporting");
-  await output.finalize();
-  const buffer = output.target.buffer;
-  if(!buffer) throw new Error("muxer produced no data");
-  return new Blob([buffer], { type: "video/mp4" });
 }

@@ -10,9 +10,19 @@ import { refreshAudioUI } from "./soundtrack";
 
 /** Pixels per second on the timeline — recomputed by renderTimeline to fit. */
 let tlPps = 12;
+/** Zoom multiplier over the fit-to-width base: 1 = fit, up to 8× in. */
+let tlZoom = 1;
 
 function tlWidth(): number {
   return Math.max(100, ($("tledit").clientWidth || 600) - 18);
+}
+
+/** Set the timeline zoom (1 = fit-to-width … 8× in) and re-render. */
+function setZoom(z: number): void {
+  const nz = Math.max(1, Math.min(8, z));
+  if(nz === tlZoom) return;
+  tlZoom = nz;
+  renderTimeline();
 }
 
 export function positionPlayhead(): void {
@@ -61,9 +71,11 @@ export function renderTimeline(): void {
   drawPreviewFrame(); updatePvTime();
   markDirty(); // every timeline mutation re-renders through here — even to empty
   syncTransDurUI(); // per-clip transitions can flip the global duration slider's visibility
-  if(!has) return;
+  $("tlzoom").style.display = has ? "" : "none";
+  if(!has){ tlZoom = 1; return; } // an empty/cleared timeline resets to fit-to-width
 
-  tlPps = Math.max(5, Math.min(60, tlWidth() / Math.max(total, 8)));
+  const fit = Math.max(5, Math.min(60, tlWidth() / Math.max(total, 8)));
+  tlPps = Math.max(5, Math.min(400, fit * tlZoom));
   const limit = total;
   $("tlinner").style.width = Math.ceil(limit * tlPps + 20) + "px";
 
@@ -94,9 +106,8 @@ export function renderTimeline(): void {
     d.addEventListener("pointerdown", function(e){
       if(app.vbusy) return;
       if((e.target as Element).classList.contains("tlh")){ startResize(e, c, clipStart, d); return; }
-      app.selClipId = c.uid !== undefined ? c.uid : null; app.selTrackId = null;
-      renderTimeline(); showClipTool();
       e.stopPropagation();
+      startClipDrag(e, c, i, d);
     });
     vlane.appendChild(d);
     if((c.trans || S.trans) !== "none" && i < app.seq.length - 1){
@@ -163,6 +174,67 @@ function evX(e: PointerEvent | TouchEvent): number {
   return te.touches ? te.touches[0].clientX : (e as PointerEvent).clientX;
 }
 
+/** Insertion index (0..n) for a drop at time `curT`, by clip midpoints. Exported for tests. */
+export function insertIndexAt(curT: number): number {
+  let acc = 0;
+  for(let k=0; k<app.seq.length; k++){
+    if(curT < acc + app.seq[k].dur/2) return k;
+    acc += app.seq[k].dur;
+  }
+  return app.seq.length;
+}
+
+// drag a clip along the video lane to reorder it (a click with no drag just selects)
+function startClipDrag(e: PointerEvent, clip: Clip, index: number, el: HTMLElement): void {
+  e.preventDefault();
+  // select now, but DON'T rebuild the lane yet — that would destroy `el` mid-drag
+  app.selClipId = clip.uid !== undefined ? clip.uid : null; app.selTrackId = null;
+  const vlane = $("vlane");
+  Array.from(vlane.querySelectorAll(".tlclip")).forEach(function(n){ n.classList.remove("on"); });
+  el.classList.add("on");
+  showClipTool();
+  const x0 = evX(e);
+  let moved = false;
+  let to = index;
+  const ind = document.createElement("div");
+  ind.className = "tldrop"; ind.style.display = "none";
+  vlane.appendChild(ind);
+  const place = function(){
+    let acc = 0;
+    for(let k=0; k<to; k++) acc += app.seq[k].dur;
+    ind.style.left = (acc*tlPps) + "px";
+  };
+  const move = function(ev: PointerEvent){
+    if(!moved && Math.abs(evX(ev) - x0) < 4) return;
+    moved = true;
+    el.classList.add("drag");
+    const r = $("tlinner").getBoundingClientRect();
+    const curT = (evX(ev) - r.left - 8) / tlPps;
+    to = insertIndexAt(curT);
+    place();
+    ind.style.display = "";
+  };
+  const up = function(){
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", up);
+    document.removeEventListener("pointercancel", up);
+    ind.remove();
+    // to === index or index+1 means the same slot → not a real move
+    if(moved && to !== index && to !== index + 1){
+      op(function(){
+        const cut = app.seq.splice(index, 1)[0];
+        const dest = to > index ? to - 1 : to;
+        app.seq.splice(dest, 0, cut);
+      });
+      invalidateResult();
+    }
+    renderTimeline(); showClipTool();
+  };
+  document.addEventListener("pointermove", move);
+  document.addEventListener("pointerup", up);
+  document.addEventListener("pointercancel", up);
+}
+
 // drag a clip's right edge to change its duration
 function startResize(e: PointerEvent, clip: Clip, clipStart: number, el: HTMLElement): void {
   e.preventDefault(); e.stopPropagation();
@@ -201,12 +273,20 @@ function startAudioMove(e: PointerEvent, t: AudioTrack, el: HTMLElement): void {
   const wc = el.querySelector("canvas")!;
   let raf = 0, dirty = false;
   let bw = 0;
+  // clip-cut times to snap the block's start against
+  const bounds = [0]; let ba = 0;
+  app.seq.forEach(function(c){ ba += c.dur; bounds.push(ba); });
   const move = function(ev: PointerEvent){
     const dx = (evX(ev) - x0) / tlPps;
     if(!moved && Math.abs(dx*tlPps) < 3) return;
     moved = true;
     const total = totalDur(), atCap = Math.max(0, total - 0.5);
-    t.at = Math.max(0, Math.min(Math.round((at0 + dx)*10)/10, atCap));
+    let nat = Math.round((at0 + dx)*10)/10;
+    const snap = 7 / tlPps; // px tolerance → seconds
+    let best = -1, bd = snap; // snap to the NEAREST clip cut within tolerance, not the first
+    for(let bi=0; bi<bounds.length; bi++){ const dd = Math.abs(bounds[bi] - nat); if(dd < bd){ bd = dd; best = bi; } }
+    if(best >= 0) nat = bounds[best];
+    t.at = Math.max(0, Math.min(nat, atCap));
     if(t.at < 0.15) t.at = 0;
     el.style.left = (t.at*tlPps) + "px";
     const vLen = Math.max(0.25, Math.min(t.end - t.start, total - t.at));
@@ -479,6 +559,16 @@ export function initTimeline(): void {
   $<HTMLSelectElement>("ctMotion").onchange = function(){ setClipOverride("motion", $<HTMLSelectElement>("ctMotion").value); };
   $<HTMLSelectElement>("ctLook").onchange = function(){ setClipOverride("look", $<HTMLSelectElement>("ctLook").value); };
   $<HTMLSelectElement>("ctTrans").onchange = function(){ setClipOverride("trans", $<HTMLSelectElement>("ctTrans").value); };
+
+  // timeline zoom — buttons + Ctrl+wheel over the timeline
+  $("tlZoomIn").onclick = function(){ if(!app.vbusy) setZoom(tlZoom * 1.5); };
+  $("tlZoomOut").onclick = function(){ if(!app.vbusy) setZoom(tlZoom / 1.5); };
+  $("tlZoomFit").onclick = function(){ if(!app.vbusy) setZoom(1); };
+  $("tledit").addEventListener("wheel", function(e){
+    if(!e.ctrlKey || app.vbusy || !app.seq.length) return;
+    e.preventDefault();
+    setZoom(tlZoom * ((e as WheelEvent).deltaY < 0 ? 1.2 : 1/1.2));
+  }, { passive: false });
 
   window.addEventListener("resize", function(){ if(app.seq.length) renderTimeline(); });
 }

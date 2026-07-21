@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { idbDel, idbGet, idbSet } from "../../src/core/idb";
 import { drawAtTime, drawClipFrame } from "../../src/render/sequence";
+import { insertIndexAt } from "../../src/ui/timeline";
 import { S, app } from "../../src/state";
 import type { Item } from "../../src/types";
 
@@ -130,6 +131,20 @@ describe("per-clip overrides", () => {
     for (let i = 0; i < px.length; i += 4) { if (px[i] < 64) dark++; if (px[i] > 192) light++; }
     expect(dark, "outgoing clip visible").toBeGreaterThan(0);
     expect(light, "incoming clip visible").toBeGreaterThan(0);
+  });
+});
+
+describe("clip reorder math", () => {
+  it("insertIndexAt picks the drop slot by clip midpoints", () => {
+    // durations 4,6,2 → boundaries 0,4,10,12 ; midpoints 2,7,11
+    app.seq = [{ id: 1, dur: 4 }, { id: 2, dur: 6 }, { id: 3, dur: 2 }];
+    expect(insertIndexAt(0)).toBe(0);
+    expect(insertIndexAt(1.9)).toBe(0);
+    expect(insertIndexAt(2.1)).toBe(1); // past clip 0's midpoint
+    expect(insertIndexAt(6.9)).toBe(1);
+    expect(insertIndexAt(7.1)).toBe(2); // past clip 1's midpoint
+    expect(insertIndexAt(11.1)).toBe(3); // past the last midpoint → append
+    expect(insertIndexAt(999)).toBe(3);
   });
 });
 

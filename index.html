@@ -107,7 +107,13 @@
   <div class="panel" id="videoPanel" style="display:none">
     <p class="ptitle">Step 2 · Arrange &amp; export a video <span class="fmt" id="fmtLine"></span></p>
 
-    <div class="stitle">Clips <span class="sub2" id="seqInfo"></span></div>
+    <div class="stitle">Clips <span class="sub2" id="seqInfo"></span>
+      <span class="tlzoom" id="tlzoom" style="display:none">
+        <button class="cbtn" id="tlZoomOut" title="Zoom out" type="button">−</button>
+        <button class="cbtn" id="tlZoomFit" title="Fit to width" type="button">⤢</button>
+        <button class="cbtn" id="tlZoomIn" title="Zoom in" type="button">+</button>
+      </span>
+    </div>
     <div class="player" id="player">
       <canvas id="pvCanvas"></canvas>
       <div class="pvEmpty" id="pvEmpty">Tick photos above to start your video</div>
@@ -206,6 +212,7 @@
       <div class="resultBar">
         <span class="sub" id="resultInfo"></span>
         <span class="spacer"></span>
+        <button class="btn ghost" id="cancelExport" type="button" style="display:none">Cancel</button>
         <button class="btn primary" id="dlResult" type="button" style="display:none">Download video</button>
       </div>
     </div>

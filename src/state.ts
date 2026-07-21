@@ -46,6 +46,8 @@ export const app = {
   selTrackId: null as number | null,
   /** True while an export runs — locks the studio UI. */
   vbusy: false,
+  /** Set by the Cancel button; the export loops check it and bail. */
+  vcancel: false,
   resultUrl: null as string | null,
   resultExt: "mp4",
 };

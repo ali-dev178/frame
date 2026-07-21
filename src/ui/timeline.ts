@@ -1,10 +1,11 @@
+import { LOOKS, MOTIONS, TRANSITIONS } from "../core/config";
 import { beginOp, commitOp, op } from "../core/history";
 import { fmtTime, shortName } from "../core/names";
 import { markDirty } from "../core/project";
 import { S, app, byId, totalDur, trackById } from "../state";
-import type { AudioTrack, Clip } from "../types";
+import type { AudioTrack, Clip, OptionDef } from "../types";
 import { $ } from "./dom";
-import { drawPreviewFrame, invalidateResult, invalidateResultQuiet, pv, pvSeek, setSelected, syncItemSelection, updatePvTime, updateSelUI } from "./studio";
+import { drawPreviewFrame, invalidateResult, invalidateResultQuiet, pv, pvSeek, setSelected, syncItemSelection, syncTransDurUI, updatePvTime, updateSelUI } from "./studio";
 import { refreshAudioUI } from "./soundtrack";
 
 /** Pixels per second on the timeline — recomputed by renderTimeline to fit. */
@@ -59,6 +60,7 @@ export function renderTimeline(): void {
 
   drawPreviewFrame(); updatePvTime();
   markDirty(); // every timeline mutation re-renders through here — even to empty
+  syncTransDurUI(); // per-clip transitions can flip the global duration slider's visibility
   if(!has) return;
 
   tlPps = Math.max(5, Math.min(60, tlWidth() / Math.max(total, 8)));
@@ -97,7 +99,7 @@ export function renderTimeline(): void {
       e.stopPropagation();
     });
     vlane.appendChild(d);
-    if(S.trans !== "none" && i < app.seq.length - 1){
+    if((c.trans || S.trans) !== "none" && i < app.seq.length - 1){
       const mk = document.createElement("div");
       mk.className = "tcut";
       mk.style.left = ((acc + c.dur) * tlPps) + "px";
@@ -296,6 +298,12 @@ function showClipTool(): void {
   $("cliptoolLbl").textContent = "Clip " + (i+1) + (it ? " · " + it.name : "") + " · " + app.seq[i].dur + "s";
   $<HTMLButtonElement>("ctL").disabled = (i === 0);
   $<HTMLButtonElement>("ctR").disabled = (i === app.seq.length - 1);
+  // per-clip override selects — "" = Auto (use the global Studio setting)
+  $<HTMLSelectElement>("ctMotion").value = app.seq[i].motion || "";
+  $<HTMLSelectElement>("ctLook").value = app.seq[i].look || "";
+  const trSel = $<HTMLSelectElement>("ctTrans");
+  trSel.value = app.seq[i].trans || "";
+  trSel.disabled = (i === app.seq.length - 1); // last clip has nothing to transition into
   const txt = $<HTMLInputElement>("ctText");
   // resync when the SELECTED CLIP changes even if the field has focus —
   // otherwise a clip switch leaves the old clip's caption editable into the new one
@@ -305,6 +313,26 @@ function showClipTool(): void {
   }
 }
 let capSyncId: number | null = null;
+
+/** Populate a per-clip override <select>: an "Auto" row (value "") + one per option. */
+function fillClipSel(sel: HTMLSelectElement, defs: OptionDef[], autoLabel: string): void {
+  sel.innerHTML = "";
+  const o0 = document.createElement("option");
+  o0.value = ""; o0.textContent = autoLabel;
+  sel.appendChild(o0);
+  defs.forEach(function(d){
+    const o = document.createElement("option");
+    o.value = d.key; o.textContent = d.label;
+    sel.appendChild(o);
+  });
+}
+
+/** Set (or clear, when v==="") a per-clip motion/look/transition override. */
+function setClipOverride(key: "motion" | "look" | "trans", v: string): void {
+  const i = selClipIdx(); if(app.vbusy || i < 0) return;
+  op(function(){ if(v) app.seq[i][key] = v; else delete app.seq[i][key]; });
+  renderTimeline(); invalidateResult(); showClipTool();
+}
 
 // toolbar for the selected audio piece
 function selTrackIdx(): number {
@@ -361,6 +389,9 @@ export function initTimeline(): void {
       const c = app.seq[i];
       const copy: Clip = { uid: ++app.clipIdc, id: c.id, dur: c.dur };
       if(c.text) copy.text = c.text;
+      if(c.motion) copy.motion = c.motion;
+      if(c.look) copy.look = c.look;
+      if(c.trans) copy.trans = c.trans;
       app.seq.splice(i+1, 0, copy);
       app.selClipId = copy.uid!;
     });
@@ -440,6 +471,14 @@ export function initTimeline(): void {
     invalidateResultQuiet(); markDirty();
   };
   atVol.onblur = function(){ commitOp(); };
+
+  // per-clip overrides — Motion / Look / Transition-out, each defaulting to Auto (global)
+  fillClipSel($<HTMLSelectElement>("ctMotion"), MOTIONS, "Motion: auto");
+  fillClipSel($<HTMLSelectElement>("ctLook"), LOOKS, "Look: auto");
+  fillClipSel($<HTMLSelectElement>("ctTrans"), TRANSITIONS, "After: auto");
+  $<HTMLSelectElement>("ctMotion").onchange = function(){ setClipOverride("motion", $<HTMLSelectElement>("ctMotion").value); };
+  $<HTMLSelectElement>("ctLook").onchange = function(){ setClipOverride("look", $<HTMLSelectElement>("ctLook").value); };
+  $<HTMLSelectElement>("ctTrans").onchange = function(){ setClipOverride("trans", $<HTMLSelectElement>("ctTrans").value); };
 
   window.addEventListener("resize", function(){ if(app.seq.length) renderTimeline(); });
 }

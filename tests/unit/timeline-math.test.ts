@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { clipBoundsAt, outDims, prog } from "../../src/render/sequence";
-import { app, totalDur } from "../../src/state";
+import { S, app, totalDur } from "../../src/state";
 import type { Item } from "../../src/types";
 
 function fakeItem(id: number, w = 0, h = 0): Item {
@@ -45,6 +45,20 @@ describe("clipBoundsAt", () => {
   it("clamps to the last clip at/after the end", () => {
     expect(clipBoundsAt(12).i).toBe(2);
     expect(clipBoundsAt(999).i).toBe(2);
+  });
+  it("resolves per-clip motion/look/trans overrides, else falls back to global S", () => {
+    S.motion = "static"; S.look = "none"; S.trans = "none";
+    app.seq = [
+      { id: 1, dur: 4, motion: "zoomin", look: "warm", trans: "crossfade" },
+      { id: 2, dur: 6 },
+    ];
+    const bs = clipBoundsAt(0).bs;
+    expect(bs[0].motion).toBe("zoomin");
+    expect(bs[0].look).toBe("warm");
+    expect(bs[0].trans).toBe("crossfade");
+    expect(bs[1].motion).toBe("static"); // no override → global
+    expect(bs[1].look).toBe("none");
+    expect(bs[1].trans).toBe("none");
   });
 });
 

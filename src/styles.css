@@ -210,6 +210,9 @@ footer b{color:var(--muted)}
 .cbtn{appearance:none;border:1px solid var(--line-2);background:var(--panel);color:var(--ink);border-radius:7px;width:26px;height:26px;font-size:12px;cursor:pointer;line-height:1}
 .cbtn:hover{border-color:var(--brass)}
 .cbtn:disabled{opacity:.35;cursor:default}
+.csel{appearance:none;border:1px solid var(--line-2);background:var(--panel);color:var(--ink);border-radius:7px;height:28px;font-size:12px;padding:0 6px;cursor:pointer;max-width:130px}
+.csel:hover{border-color:var(--brass)}
+.csel:disabled{opacity:.35;cursor:default}
 .cdur{display:flex;align-items:center;gap:5px}
 .cdur .cval{font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums;min-width:26px;text-align:center}
 .hintline{color:var(--muted-2);font-size:12px}

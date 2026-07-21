@@ -111,6 +111,12 @@ export interface Clip {
   dur: number;
   /** Caption drawn over this clip's frames. */
   text?: string;
+  /** Per-clip motion override — falls back to global S.motion when unset. */
+  motion?: string;
+  /** Per-clip color-look override — falls back to global S.look. */
+  look?: string;
+  /** Per-clip transition OUT of this clip into the next — falls back to global S.trans. */
+  trans?: string;
 }
 
 /** One audio block on the timeline. */

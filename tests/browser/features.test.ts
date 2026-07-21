@@ -92,6 +92,47 @@ describe("color looks", () => {
   });
 });
 
+describe("per-clip overrides", () => {
+  it("a per-clip look recolors just that clip while the global look stays none", () => {
+    const src = noiseCanvas(64, 64);
+    app.items = [fakeItem(1, src)];
+    // S.look is "none" (beforeEach) — the OVERRIDE lives on the clip
+    app.seq = [{ id: 1, dur: 4, look: "mono" }];
+    const out = document.createElement("canvas");
+    out.width = 64; out.height = 64;
+    drawAtTime(out.getContext("2d")!, 64, 64, 1);
+    const px = pixelsOf(out);
+    expect(countDiffs(px, pixelsOf(src))).toBeGreaterThan(0); // recolored, not the 1:1 path
+    for (let i = 0; i < px.length; i += 4) { // mono ⇒ r==g==b
+      expect(px[i]).toBe(px[i + 1]);
+      expect(px[i + 1]).toBe(px[i + 2]);
+    }
+  });
+
+  it("a per-clip transition blends even when the global transition is a hard cut", () => {
+    const black = document.createElement("canvas");
+    black.width = 64; black.height = 64;
+    black.getContext("2d")!.fillRect(0, 0, 64, 64);
+    const white = document.createElement("canvas");
+    white.width = 64; white.height = 64;
+    const wc = white.getContext("2d")!; wc.fillStyle = "#fff"; wc.fillRect(0, 0, 64, 64);
+
+    app.items = [fakeItem(1, black), fakeItem(2, white)];
+    // global trans stays "none" — a spatial transition is set ON the first clip
+    app.seq = [{ id: 1, dur: 4, trans: "slideup" }, { id: 2, dur: 4 }];
+    S.transDur = 1;
+
+    const out = document.createElement("canvas");
+    out.width = 64; out.height = 64;
+    drawAtTime(out.getContext("2d")!, 64, 64, 4); // dead center of the cut
+    const px = pixelsOf(out);
+    let dark = 0, light = 0;
+    for (let i = 0; i < px.length; i += 4) { if (px[i] < 64) dark++; if (px[i] > 192) light++; }
+    expect(dark, "outgoing clip visible").toBeGreaterThan(0);
+    expect(light, "incoming clip visible").toBeGreaterThan(0);
+  });
+});
+
 describe("captions", () => {
   it("draws the clip's caption over the frame", () => {
     const src = noiseCanvas(120, 120);

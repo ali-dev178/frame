@@ -58,6 +58,16 @@ export function studioOnFrameChange(): void {
   invalidateResult();
 }
 
+/**
+ * The transition-duration slider is global (S.transDur applies to ALL
+ * transitions), so show it whenever ANY transition is active — the global
+ * one OR a per-clip override — not just when S.trans is non-none.
+ */
+export function syncTransDurUI(): void {
+  const anyClipTrans = app.seq.some(function(c){ return !!c.trans && c.trans !== "none"; });
+  $("segTransDur").style.display = (S.trans === "none" && !anyClipTrans) ? "none" : "";
+}
+
 /* ---------- live preview engine ---------- */
 export const pv = {
   playing: false,
@@ -253,11 +263,11 @@ export function initStudio(): void {
     S.trans = k;
     refreshSeg($("segTrans"), TRANSITIONS.map(function(x){return x.key;}), k);
     $("transHint").textContent = hintOf(TRANSITIONS, k);
-    $("segTransDur").style.display = (k === "none") ? "none" : "";
+    syncTransDurUI();
     renderTimeline(); invalidateResult();
   });
   $("transHint").textContent = hintOf(TRANSITIONS, S.trans);
-  $("segTransDur").style.display = (S.trans === "none") ? "none" : "";
+  syncTransDurUI();
   buildSeg($("segTransDur"), TDURS, String(S.transDur), function(k){
     S.transDur = parseFloat(k);
     refreshSeg($("segTransDur"), TDURS.map(function(x){return x.key;}), k);

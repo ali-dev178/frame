@@ -119,6 +119,10 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
     if (!it) return;
     const clip: Clip = { uid: ++app.clipIdc, id: it.id, dur: Math.max(1, Math.min(60, Math.round(Number(c.dur)) || 4)) };
     if (typeof c.text === "string" && c.text.trim()) clip.text = c.text.slice(0, 80);
+    // per-clip overrides are UNTRUSTED-shaped — only accept known option keys
+    if (typeof c.motion === "string" && MOTIONS.some(function (m) { return m.key === c.motion; })) clip.motion = c.motion;
+    if (typeof c.look === "string" && LOOKS.some(function (l) { return l.key === c.look; })) clip.look = c.look;
+    if (typeof c.trans === "string" && TRANSITIONS.some(function (tr) { return tr.key === c.trans; })) clip.trans = c.trans;
     app.seq.push(clip);
   });
   loaded.forEach(function (it) { if (it) syncItemSelection(it); });

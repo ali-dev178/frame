@@ -25,7 +25,7 @@ let pending: Snapshot | null = null;
 
 function snap(): Snapshot {
   return {
-    seq: app.seq.map(function (c) { return { id: c.id, uid: c.uid, dur: c.dur, text: c.text }; }),
+    seq: app.seq.map(function (c) { return { id: c.id, uid: c.uid, dur: c.dur, text: c.text, motion: c.motion, look: c.look, trans: c.trans }; }),
     tracks: app.tracks.map(function (t) { return Object.assign({}, t); }),
     selClipId: app.selClipId,
     selTrackId: app.selTrackId,
@@ -37,7 +37,8 @@ function sameArrangement(a: Snapshot, b: Snapshot): boolean {
   if (a.seq.length !== b.seq.length || a.tracks.length !== b.tracks.length) return false;
   for (let i = 0; i < a.seq.length; i++) {
     const x = a.seq[i], y = b.seq[i];
-    if (x.id !== y.id || x.uid !== y.uid || x.dur !== y.dur || x.text !== y.text) return false;
+    if (x.id !== y.id || x.uid !== y.uid || x.dur !== y.dur || x.text !== y.text ||
+        x.motion !== y.motion || x.look !== y.look || x.trans !== y.trans) return false;
   }
   for (let i = 0; i < a.tracks.length; i++) {
     const x = a.tracks[i], y = b.tracks[i];
@@ -76,7 +77,7 @@ export function op(fn: () => void): void {
 }
 
 function apply(s: Snapshot): void {
-  app.seq = s.seq.map(function (c) { return { id: c.id, uid: c.uid, dur: c.dur, text: c.text }; });
+  app.seq = s.seq.map(function (c) { return { id: c.id, uid: c.uid, dur: c.dur, text: c.text, motion: c.motion, look: c.look, trans: c.trans }; });
   app.tracks = s.tracks.map(function (t) { return Object.assign({}, t); });
   app.selClipId = s.selClipId;
   app.selTrackId = s.selTrackId;

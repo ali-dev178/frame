@@ -1,4 +1,5 @@
 import { ensureCtx } from "../audio/engine";
+import { op } from "../core/history";
 import { fmtTime, round10 } from "../core/names";
 import { app, hasAudio, nextLane, sndExtent, totalDur } from "../state";
 import type { AudioTrack } from "../types";
@@ -21,15 +22,17 @@ export function initSoundtrack(): void {
 
   $("fitMusic").onclick = function(){
     if(!hasAudio() || !app.seq.length){ const m=$("music"); m.style.borderColor="var(--warn)"; setTimeout(function(){ m.style.borderColor="var(--line)"; },700); return; }
-    const target = Math.min(90, Math.max(1, Math.round(sndExtent())));
-    const now = totalDur();
-    let acc = 0;
-    app.seq.forEach(function(c){
-      c.dur = Math.max(1, Math.min(60, Math.round(c.dur * target / now)));
-      acc += c.dur;
+    op(function(){
+      const target = Math.min(90, Math.max(1, Math.round(sndExtent())));
+      const now = totalDur();
+      let acc = 0;
+      app.seq.forEach(function(c){
+        c.dur = Math.max(1, Math.min(60, Math.round(c.dur * target / now)));
+        acc += c.dur;
+      });
+      const drift = target - acc;
+      app.seq[app.seq.length-1].dur = Math.max(1, Math.min(60, app.seq[app.seq.length-1].dur + drift));
     });
-    const drift = target - acc;
-    app.seq[app.seq.length-1].dur = Math.max(1, Math.min(60, app.seq[app.seq.length-1].dur + drift));
     renderTimeline(); updateSelUI(); invalidateResult();
   };
 }
@@ -40,9 +43,11 @@ function addAudioFiles(list: FileList): void {
     fr.onload = function(){
       ensureCtx().decodeAudioData((fr.result as ArrayBuffer).slice(0), function(buf){
         const atDefault = Math.max(0, Math.min(round10(pv.t), Math.max(0, totalDur() - 0.5)));
-        const t: AudioTrack = { id: ++app.trackIdc, name: file.name, file: file, buffer: buf, dur: buf.duration,
-                  start: 0, end: buf.duration, at: atDefault, lane: nextLane() };
-        app.tracks.push(t); app.selTrackId = t.id;
+        op(function(){
+          const t: AudioTrack = { id: ++app.trackIdc, name: file.name, file: file, buffer: buf, dur: buf.duration,
+                    start: 0, end: buf.duration, at: atDefault, lane: nextLane() };
+          app.tracks.push(t); app.selTrackId = t.id;
+        });
         refreshAudioUI(); invalidateResult();
       }, function(){ $("musicDur").textContent = "Couldn't read \"" + file.name + "\" — try MP3, M4A, or WAV."; });
     };

@@ -1,9 +1,10 @@
+import { beginOp, commitOp, op } from "../core/history";
 import { fmtTime, shortName } from "../core/names";
 import { markDirty } from "../core/project";
 import { S, app, byId, totalDur, trackById } from "../state";
 import type { AudioTrack, Clip } from "../types";
 import { $ } from "./dom";
-import { drawPreviewFrame, invalidateResult, invalidateResultQuiet, pv, pvSeek, setSelected, updatePvTime, updateSelUI } from "./studio";
+import { drawPreviewFrame, invalidateResult, invalidateResultQuiet, pv, pvSeek, setSelected, syncItemSelection, updatePvTime, updateSelUI } from "./studio";
 import { refreshAudioUI } from "./soundtrack";
 
 /** Pixels per second on the timeline — recomputed by renderTimeline to fit. */
@@ -41,7 +42,7 @@ function drawSegWave(cv2: HTMLCanvasElement, bw: number, bh: number, tr: AudioTr
 
 export function renderTimeline(): void {
   app.seq = app.seq.filter(function(c){ return byId(c.id); });
-  if(app.selClipId !== null && !app.seq.some(function(c){ return c.id === app.selClipId; })) app.selClipId = null;
+  if(app.selClipId !== null && !app.seq.some(function(c){ return c.uid === app.selClipId; })) app.selClipId = null;
   if(app.selTrackId !== null && !trackById(app.selTrackId)) app.selTrackId = null;
   const total = totalDur();
   if(pv.t > total) pv.t = total;
@@ -82,7 +83,7 @@ export function renderTimeline(): void {
   app.seq.forEach(function(c, i){
     const it = byId(c.id);
     const d = document.createElement("div");
-    d.className = "tlclip" + (c.id === app.selClipId ? " on" : "");
+    d.className = "tlclip" + (c.uid === app.selClipId ? " on" : "");
     d.style.left = (acc*tlPps) + "px";
     d.style.width = Math.max(6, c.dur*tlPps) + "px";
     if(it && it.thumbUrl) d.style.backgroundImage = "url(" + it.thumbUrl + ")";
@@ -91,7 +92,7 @@ export function renderTimeline(): void {
     d.addEventListener("pointerdown", function(e){
       if(app.vbusy) return;
       if((e.target as Element).classList.contains("tlh")){ startResize(e, c, clipStart, d); return; }
-      app.selClipId = c.id; app.selTrackId = null;
+      app.selClipId = c.uid !== undefined ? c.uid : null; app.selTrackId = null;
       renderTimeline(); showClipTool();
       e.stopPropagation();
     });
@@ -163,7 +164,8 @@ function evX(e: PointerEvent | TouchEvent): number {
 // drag a clip's right edge to change its duration
 function startResize(e: PointerEvent, clip: Clip, clipStart: number, el: HTMLElement): void {
   e.preventDefault(); e.stopPropagation();
-  app.selClipId = clip.id; app.selTrackId = null;
+  beginOp();
+  app.selClipId = clip.uid !== undefined ? clip.uid : null; app.selTrackId = null;
   const move = function(ev: PointerEvent){
     const r = $("tlinner").getBoundingClientRect();
     const x = evX(ev) - r.left - 8;
@@ -178,15 +180,19 @@ function startResize(e: PointerEvent, clip: Clip, clipStart: number, el: HTMLEle
   const up = function(){
     document.removeEventListener("pointermove", move);
     document.removeEventListener("pointerup", up);
+    document.removeEventListener("pointercancel", up);
+    commitOp();
     renderTimeline(); updateSelUI(); invalidateResult(); showClipTool();
   };
   document.addEventListener("pointermove", move);
   document.addEventListener("pointerup", up);
+  document.addEventListener("pointercancel", up); // touch/pen interruption still terminates the drag → commitOp runs
 }
 
 // drag an audio block body to move it along the timeline (click = select)
 function startAudioMove(e: PointerEvent, t: AudioTrack, el: HTMLElement): void {
   e.preventDefault();
+  beginOp();
   const x0 = evX(e);
   const at0 = t.at;
   let moved = false;
@@ -215,7 +221,9 @@ function startAudioMove(e: PointerEvent, t: AudioTrack, el: HTMLElement): void {
   const up = function(){
     document.removeEventListener("pointermove", move);
     document.removeEventListener("pointerup", up);
+    document.removeEventListener("pointercancel", up);
     cancelAnimationFrame(raf);
+    commitOp();
     app.selTrackId = t.id; app.selClipId = null;
     if(moved){ refreshAudioUI(); invalidateResult(); }
     else renderTimeline();
@@ -223,11 +231,13 @@ function startAudioMove(e: PointerEvent, t: AudioTrack, el: HTMLElement): void {
   };
   document.addEventListener("pointermove", move);
   document.addEventListener("pointerup", up);
+  document.addEventListener("pointercancel", up); // touch/pen interruption still terminates the drag → commitOp runs
 }
 
 // drag an audio block's edges: left trims the start (block edge moves, audio stays time-aligned), right trims the end
 function startAudioTrim(e: PointerEvent, t: AudioTrack, side: "L" | "R", el: HTMLElement): void {
   e.preventDefault(); e.stopPropagation();
+  beginOp();
   app.selTrackId = t.id; app.selClipId = null;
   const x0 = evX(e);
   const s0 = t.start, e0 = t.end, a0 = t.at;
@@ -260,18 +270,21 @@ function startAudioTrim(e: PointerEvent, t: AudioTrack, side: "L" | "R", el: HTM
   const up = function(){
     document.removeEventListener("pointermove", move);
     document.removeEventListener("pointerup", up);
+    document.removeEventListener("pointercancel", up);
     cancelAnimationFrame(raf);
+    commitOp();
     refreshAudioUI(); invalidateResult(); showAudioTool();
   };
   document.addEventListener("pointermove", move);
   document.addEventListener("pointerup", up);
+  document.addEventListener("pointercancel", up); // touch/pen interruption still terminates the drag → commitOp runs
   $("audiotool").style.display = ""; $("cliptool").style.display = "none";
   updateAudioToolLbl();
 }
 
 // toolbar for the selected clip
 function selClipIdx(): number {
-  for(let i=0;i<app.seq.length;i++){ if(app.seq[i].id===app.selClipId) return i; }
+  for(let i=0;i<app.seq.length;i++){ if(app.seq[i].uid===app.selClipId) return i; }
   return -1;
 }
 function showClipTool(): void {
@@ -301,9 +314,11 @@ function selTrackIdx(): number {
 function updateAudioToolLbl(): void {
   const i = selTrackIdx(); if(i < 0) return;
   const t = app.tracks[i];
+  const vol = t.gain === undefined ? 1 : t.gain;
   let lbl = shortName(t.name) + " · " + fmtTime(t.end - t.start) + " · at " + fmtTime(t.at);
   if(t.start > 0.05) lbl += " · from " + fmtTime(t.start);
   if(t.end < t.dur - 0.05) lbl += " · to " + fmtTime(t.end);
+  lbl += " · vol " + Math.round(vol * 100) + "%";
   $("audiotoolLbl").textContent = lbl;
 }
 function showAudioTool(): void {
@@ -311,6 +326,8 @@ function showAudioTool(): void {
   if(i < 0){ $("audiotool").style.display = "none"; return; }
   $("cliptool").style.display = "none";
   $("audiotool").style.display = "";
+  const t = app.tracks[i];
+  $<HTMLInputElement>("atVol").value = String(Math.round((t.gain === undefined ? 1 : t.gain) * 100));
   updateAudioToolLbl();
 }
 
@@ -334,15 +351,38 @@ export function initTimeline(): void {
   document.addEventListener("pointermove", function(e){ if(scrubbing) pvSeek(toT(e)); });
   document.addEventListener("pointerup", function(){ scrubbing = false; });
 
-  $("ctL").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<1) return; const t=app.seq[i-1]; app.seq[i-1]=app.seq[i]; app.seq[i]=t; renderTimeline(); invalidateResult(); showClipTool(); };
-  $("ctR").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0||i>=app.seq.length-1) return; const t=app.seq[i+1]; app.seq[i+1]=app.seq[i]; app.seq[i]=t; renderTimeline(); invalidateResult(); showClipTool(); };
-  $("ctM").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; app.seq[i].dur=Math.max(1,app.seq[i].dur-1); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
-  $("ctP").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; app.seq[i].dur=Math.min(60,app.seq[i].dur+1); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
-  $("ctX").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; const it=byId(app.seq[i].id); if(it) setSelected(it,false); };
+  $("ctL").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<1) return; op(function(){ const t=app.seq[i-1]; app.seq[i-1]=app.seq[i]; app.seq[i]=t; }); renderTimeline(); invalidateResult(); showClipTool(); };
+  $("ctR").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0||i>=app.seq.length-1) return; op(function(){ const t=app.seq[i+1]; app.seq[i+1]=app.seq[i]; app.seq[i]=t; }); renderTimeline(); invalidateResult(); showClipTool(); };
+  $("ctM").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; op(function(){ app.seq[i].dur=Math.max(1,app.seq[i].dur-1); }); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
+  $("ctP").onclick = function(){ const i=selClipIdx(); if(app.vbusy||i<0) return; op(function(){ app.seq[i].dur=Math.min(60,app.seq[i].dur+1); }); renderTimeline(); updateSelUI(); invalidateResult(); showClipTool(); };
+  $("ctD").onclick = function(){
+    const i=selClipIdx(); if(app.vbusy||i<0) return;
+    op(function(){
+      const c = app.seq[i];
+      const copy: Clip = { uid: ++app.clipIdc, id: c.id, dur: c.dur };
+      if(c.text) copy.text = c.text;
+      app.seq.splice(i+1, 0, copy);
+      app.selClipId = copy.uid!;
+    });
+    renderTimeline(); updateSelUI(); invalidateResult(); markDirty(); showClipTool();
+  };
+  $("ctX").onclick = function(){
+    const i=selClipIdx(); if(app.vbusy||i<0) return;
+    // removes just THIS clip — the photo stays ticked while other copies remain
+    const it = byId(app.seq[i].id);
+    op(function(){
+      app.seq.splice(i, 1);
+      app.selClipId = null;
+    });
+    if(it) syncItemSelection(it);
+    renderTimeline(); updateSelUI(); invalidateResult(); markDirty();
+  };
 
   // per-clip caption — updates the preview live without rebuilding the
   // timeline (a rebuild would steal focus mid-typing)
   const ctText = $<HTMLInputElement>("ctText");
+  ctText.onfocus = function(){ beginOp(); };   // one undo step per editing session,
+  ctText.onblur = function(){ commitOp(); };   // not per keystroke
   ctText.oninput = function(){
     const i = selClipIdx(); if(app.vbusy || i < 0) return;
     const v = ctText.value;
@@ -358,17 +398,48 @@ export function initTimeline(): void {
       $("audiotoolLbl").textContent = "Move the playhead over this audio, then split.";
       return;
     }
-    const right: AudioTrack = { id: ++app.trackIdc, name: t.name, file: t.file, buffer: t.buffer, dur: t.dur,
-                  start: t.start + rel, end: t.end, at: t.at + rel, lane: t.lane };
-    t.end = t.start + rel;
-    app.tracks.splice(i+1, 0, right);
+    op(function(){
+      const right: AudioTrack = { id: ++app.trackIdc, name: t.name, file: t.file, buffer: t.buffer, dur: t.dur,
+                    start: t.start + rel, end: t.end, at: t.at + rel, lane: t.lane, gain: t.gain };
+      t.end = t.start + rel;
+      app.tracks.splice(i+1, 0, right);
+    });
+    refreshAudioUI(); invalidateResult(); showAudioTool();
+  };
+  $("atD").onclick = function(){
+    const i = selTrackIdx(); if(app.vbusy || i < 0) return;
+    op(function(){
+      const t = app.tracks[i];
+      const len = Math.max(0, t.end - t.start);
+      const copy: AudioTrack = { id: ++app.trackIdc, name: t.name, file: t.file, buffer: t.buffer, dur: t.dur,
+                    start: t.start, end: t.end, at: t.at + len, lane: t.lane, gain: t.gain };
+      app.tracks.splice(i+1, 0, copy);
+      app.selTrackId = copy.id;
+    });
     refreshAudioUI(); invalidateResult(); showAudioTool();
   };
   $("atX").onclick = function(){
     const i = selTrackIdx(); if(app.vbusy || i < 0) return;
-    app.tracks.splice(i, 1); app.selTrackId = null;
+    op(function(){
+      app.tracks.splice(i, 1); app.selTrackId = null;
+    });
     refreshAudioUI(); invalidateResult();
   };
+
+  // per-track volume — the mixing story: drop a music bed under narration
+  const atVol = $<HTMLInputElement>("atVol");
+  // One undo step per adjustment session: begin when the slider takes focus
+  // (mouse press or Tab), commit on blur. A per-onchange commit would only
+  // record the FIRST keyboard arrow-key change and drop the rest.
+  atVol.onfocus = function(){ beginOp(); };
+  atVol.oninput = function(){
+    const i = selTrackIdx(); if(app.vbusy || i < 0) return;
+    app.tracks[i].gain = Math.max(0, Math.min(1, (+atVol.value) / 100));
+    updateAudioToolLbl();
+    if(pv.playing) pvSeek(pv.t); // reschedule live audio with the new level
+    invalidateResultQuiet(); markDirty();
+  };
+  atVol.onblur = function(){ commitOp(); };
 
   window.addEventListener("resize", function(){ if(app.seq.length) renderTimeline(); });
 }

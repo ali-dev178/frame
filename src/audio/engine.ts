@@ -18,7 +18,16 @@ export function scheduleSegs(ctx: BaseAudioContext, gainNode: GainNode, baseTime
     if(pEnd <= fromT + 0.01 || pStart >= total - 0.01) return;
     const skip = Math.max(0, fromT - pStart);
     const s = ctx.createBufferSource();
-    s.buffer = t.buffer; s.connect(gainNode);
+    s.buffer = t.buffer;
+    const vol = t.gain === undefined ? 1 : t.gain;
+    if(vol !== 1){
+      // per-track volume — a music bed under narration mixes at its own level
+      const tg = ctx.createGain();
+      tg.gain.value = vol;
+      s.connect(tg); tg.connect(gainNode);
+    } else {
+      s.connect(gainNode);
+    }
     s.start(baseTime + Math.max(0, pStart - fromT), t.start + skip);
     s.stop(baseTime + (pEnd - fromT));
     nodes.push(s);

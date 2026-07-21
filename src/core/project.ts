@@ -11,7 +11,7 @@ import { idbDel, idbGet, idbSet } from "./idb";
 
 export interface SavedItem { name: string; blob: Blob }
 export interface SavedClip { idx: number; dur: number; text?: string }
-export interface SavedTrack { name: string; blob: Blob; start: number; end: number; at: number; lane: number }
+export interface SavedTrack { name: string; blob: Blob; start: number; end: number; at: number; lane: number; gain?: number }
 export interface SavedProject {
   v: 1;
   savedAt: number;
@@ -69,7 +69,7 @@ export function serialize(): SavedProject {
       .filter(function (c) { return c.idx >= 0; }),
     tracks: app.tracks
       .filter(function (t) { return !!t.file; })
-      .map(function (t) { return { name: t.name, blob: t.file!, start: t.start, end: t.end, at: t.at, lane: t.lane }; }),
+      .map(function (t) { return { name: t.name, blob: t.file!, start: t.start, end: t.end, at: t.at, lane: t.lane, gain: t.gain }; }),
   };
 }
 

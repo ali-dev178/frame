@@ -4,6 +4,7 @@ import { initCards, syncBars } from "./ui/cards";
 import { initStudio } from "./ui/studio";
 import { initTimeline } from "./ui/timeline";
 import { initSoundtrack } from "./ui/soundtrack";
+import { initShortcuts } from "./ui/shortcuts";
 import { initPresets } from "./ui/presets";
 import { maybeOfferRestore } from "./ui/restore";
 
@@ -13,6 +14,7 @@ initCards();
 initStudio();
 initTimeline();
 initSoundtrack();
+initShortcuts();
 syncBars();
 
 // async boot tail: presets load, then session restore (restores settings

@@ -103,7 +103,10 @@ export interface Item {
 
 /** One entry in the video timeline. */
 export interface Clip {
+  /** The source ITEM id — several clips may share one photo (duplicates). */
   id: number;
+  /** This clip's own identity on the timeline (selection, duplicates). */
+  uid?: number;
   /** Seconds this clip shows. */
   dur: number;
   /** Caption drawn over this clip's frames. */
@@ -127,6 +130,8 @@ export interface AudioTrack {
   at: number;
   /** Which visual row the block sits on. */
   lane: number;
+  /** Playback volume 0..1 (default 1) — a music bed under narration wants ~0.3. */
+  gain?: number;
 }
 
 export type Orient = "sides" | "vert" | "none";

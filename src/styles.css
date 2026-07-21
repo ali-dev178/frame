@@ -278,3 +278,4 @@ footer{margin-top:32px;padding-top:24px}
 #presetChips{min-height:20px}
 #presetChips:empty::after{content:"No presets yet — save your favorite settings.";color:var(--muted-2);font-size:12px}
 .capInput{flex:1;min-width:200px}
+.atvol{width:110px}

@@ -1,12 +1,13 @@
 import { ensureCtx } from "../audio/engine";
 import { FORMATS, LOOKS, MKEYS, MOTIONS, TRANSITIONS, VQUAL } from "../core/config";
+import { clearHistory } from "../core/history";
 import { armAutosave, loadSaved, markDirty } from "../core/project";
 import type { SavedProject } from "../core/project";
 import { S, app } from "../state";
-import type { Item, Settings } from "../types";
+import type { Clip, Item, Settings } from "../types";
 import { loadFile } from "./cards";
 import { initControls } from "./controls";
-import { initStudio, setSelected } from "./studio";
+import { initStudio, syncItemSelection, updateSelUI } from "./studio";
 import { renderTimeline } from "./timeline";
 import { refreshAudioUI } from "./soundtrack";
 
@@ -112,19 +113,15 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
     loaded.push(it);
   }
 
-  // clips: re-select in saved order, then apply (clamped) durations + captions
-  saved.seq.forEach(function (c) {
-    const it = loaded[c.idx];
-    if (it) setSelected(it, true);
-  });
+  // clips: rebuild the timeline directly (duplicates allowed), clamped on ingestion
   saved.seq.forEach(function (c) {
     const it = loaded[c.idx];
     if (!it) return;
-    const clip = app.seq.filter(function (x) { return x.id === it.id; })[0];
-    if (!clip) return;
-    clip.dur = Math.max(1, Math.min(60, Math.round(Number(c.dur)) || 4));
+    const clip: Clip = { uid: ++app.clipIdc, id: it.id, dur: Math.max(1, Math.min(60, Math.round(Number(c.dur)) || 4)) };
     if (typeof c.text === "string" && c.text.trim()) clip.text = c.text.slice(0, 80);
+    app.seq.push(clip);
   });
+  loaded.forEach(function (it) { if (it) syncItemSelection(it); });
 
   // audio — re-decode the original files, restore trims/positions
   if (saved.tracks.length) {
@@ -140,6 +137,7 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
           end: clampNum(st.end, start, buf.duration, buf.duration),
           at: clampNum(st.at, 0, 36000, 0),
           lane: Math.max(0, Math.round(Number(st.lane)) || 0),
+          gain: clampNum(st.gain === undefined ? 1 : st.gain, 0, 1, 1),
         });
       } catch (e) { failures++; }
     }
@@ -147,5 +145,7 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
 
   refreshAudioUI();
   renderTimeline();
+  updateSelUI();
+  clearHistory(); // the restored state is the new baseline — nothing to undo into
   return failures;
 }

@@ -113,9 +113,10 @@
       <div class="pvEmpty" id="pvEmpty">Tick photos above to start your video</div>
     </div>
     <div class="transport">
-      <button class="btn primary pvbtn" id="pvPlayBtn" title="Play / pause">►</button>
+      <button class="btn primary pvbtn" id="pvPlayBtn" title="Play / pause (Space)">►</button>
+      <button class="btn pvbtn" id="pvFrameBtn" title="Save this frame as PNG — e.g. a cover matching the video">📷</button>
       <span class="ptime" id="pvTime">0:00 / 0:00</span>
-      <span class="sub" style="margin-left:auto">drag audio blocks to position them · drag edges to trim · ✂ splits at the playhead</span>
+      <span class="sub" style="margin-left:auto">Space play · ←/→ nudge · D duplicate · Del remove · Ctrl+Z undo · drag blocks/edges · ✂ splits at the playhead</span>
     </div>
     <div class="tledit" id="tledit">
       <div class="tlinner" id="tlinner">
@@ -131,13 +132,17 @@
       <button class="cbtn" id="ctR" title="Move later">▶</button>
       <button class="cbtn" id="ctM" title="1s shorter">−</button>
       <button class="cbtn" id="ctP" title="1s longer">+</button>
-      <button class="cbtn" id="ctX" title="Remove clip">✕</button>
+      <button class="cbtn" id="ctD" title="Duplicate clip (D)">⧉</button>
+      <button class="cbtn" id="ctX" title="Remove clip (Del)">✕</button>
       <input type="text" class="txt capInput" id="ctText" placeholder="Caption for this clip…" maxlength="80">
     </div>
     <div class="cliptool" id="audiotool" style="display:none">
       <span class="sub" id="audiotoolLbl"></span>
-      <button class="cbtn" id="atS" title="Split at playhead">✂</button>
-      <button class="cbtn" id="atX" title="Remove">✕</button>
+      <button class="cbtn" id="atS" title="Split at playhead (S)">✂</button>
+      <button class="cbtn" id="atD" title="Duplicate (D)">⧉</button>
+      <button class="cbtn" id="atX" title="Remove (Del)">✕</button>
+      <span class="sub">vol</span>
+      <input type="range" id="atVol" class="atvol" min="0" max="100" step="1" title="Volume of this audio piece">
     </div>
     <div class="hintline" id="seqHint">Tick photos above to add them here — then set the order and how long each one shows.</div>
 

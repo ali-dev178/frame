@@ -1,4 +1,5 @@
 import { computeColors } from "../core/colors";
+import { clearHistory, op } from "../core/history";
 import { outName, passName } from "../core/names";
 import { clearSaved, markDirty } from "../core/project";
 import { platform } from "../platform";
@@ -32,7 +33,7 @@ export function initCards(): void {
     if(e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
   });
 
-  $("clear").onclick = function(){ if(app.vbusy) return; app.items = []; app.seq = []; grid.innerHTML=""; invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
+  $("clear").onclick = function(){ if(app.vbusy) return; app.items = []; app.seq = []; grid.innerHTML=""; clearHistory(); invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
   $("dlAll").onclick = downloadAll;
 }
 
@@ -76,7 +77,10 @@ function createCard(it: Item): void {
   (card.querySelector(".vfy") as HTMLButtonElement).onclick = function(){ verifyItem(it); };
   const pick = card.querySelector(".pick input") as HTMLInputElement;
   pick.addEventListener("change", function(){
-    setSelected(it, pick.checked);
+    // ticking adds a clip / unticking removes ALL clips of this photo — a pure
+    // arrangement edit, so record it as its own undo step (media removal via
+    // Remove/Clear stays out of history)
+    op(function(){ setSelected(it, pick.checked); });
   });
   const dlBtn = card.querySelector(".dl") as HTMLButtonElement;
   dlBtn.onclick = function(){

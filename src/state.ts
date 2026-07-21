@@ -39,6 +39,7 @@ export const app = {
   idc: 0,
   /** The clip timeline, in order. */
   seq: [] as Clip[],
+  clipIdc: 0,
   tracks: [] as AudioTrack[],
   trackIdc: 0,
   selClipId: null as number | null,

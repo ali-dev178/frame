@@ -1,5 +1,6 @@
 import { applyFadesFrom, ensureCtx, scheduleSegs } from "../audio/engine";
 import { LOOKS, MOTIONS, TDURS, TRANSITIONS, VQUAL } from "../core/config";
+import { beginOp, commitOp } from "../core/history";
 import { fmtTime } from "../core/names";
 import { markDirty } from "../core/project";
 import { exportFast } from "../export/fast";
@@ -20,20 +21,34 @@ export function setSelected(it: Item, on: boolean): void {
     const cb = it.el.querySelector(".pick input") as HTMLInputElement | null;
     if(cb) cb.checked = it.selected;
   }
-  if(it.selected){ if(!app.seq.some(function(c){ return c.id===it.id; })) app.seq.push({id: it.id, dur: 4}); }
-  else {
+  if(it.selected){
+    if(!app.seq.some(function(c){ return c.id===it.id; })) app.seq.push({uid: ++app.clipIdc, id: it.id, dur: 4});
+  } else {
+    // unticking removes EVERY clip of this photo, duplicates included
+    if(app.seq.some(function(c){ return c.id===it.id && c.uid===app.selClipId; })) app.selClipId = null;
     app.seq = app.seq.filter(function(c){ return c.id !== it.id; });
-    if(app.selClipId === it.id) app.selClipId = null;
   }
   renderTimeline(); updateSelUI(); invalidateResult(); markDirty();
 }
 
+/** Card checkbox/highlight follow the timeline — used when single clips are removed. */
+export function syncItemSelection(it: Item): void {
+  it.selected = app.seq.some(function(c){ return c.id === it.id; });
+  if(it.el){
+    it.el.classList.toggle("sel", !!it.selected);
+    const cb = it.el.querySelector(".pick input") as HTMLInputElement | null;
+    if(cb) cb.checked = !!it.selected;
+  }
+}
+
 export function updateSelUI(): void {
   const n = app.seq.length, m = app.items.length;
+  // duplicates mean clip count ≠ photo count — "all selected" is about PHOTOS
+  const selItems = app.items.filter(function(it){ return !!it.selected; }).length;
   $("selInfo").textContent = (n === 0)
     ? "Tick the checkbox on the photos you want in the video"
-    : n + " of " + m + " in the video · " + totalDur() + "s";
-  $("selAll").textContent = (m > 0 && n === m) ? "Select none" : "Select all";
+    : selItems + " of " + m + " photos · " + n + (n === 1 ? " clip" : " clips") + " · " + totalDur() + "s";
+  $("selAll").textContent = (m > 0 && selItems === m) ? "Select none" : "Select all";
   const btn = $<HTMLButtonElement>("exportBtn");
   if(!app.vbusy){ btn.disabled = (n === 0); btn.textContent = "Export video"; }
 }
@@ -252,10 +267,38 @@ export function initStudio(): void {
 
   $("pvPlayBtn").onclick = function(){ if(pv.playing) pvPause(); else pvPlay(); };
 
+  // frame-perfect still of the playhead moment — e.g. a reel cover that
+  // matches the actual video (same renderer as export, full output size)
+  $("pvFrameBtn").onclick = function(){
+    if(app.vbusy || !app.seq.length) return;
+    const dims = outDims();
+    if(!dims.W) return;
+    const cv = document.createElement("canvas");
+    cv.width = dims.W; cv.height = dims.H;
+    drawAtTime(cv.getContext("2d")!, dims.W, dims.H, Math.min(pv.t, totalDur()));
+    cv.toBlob(function(blob){
+      if(!blob) return;
+      const first = byId(app.seq[0].id);
+      const base = first ? first.name.replace(/\.[^.]+$/, "") : "video";
+      const at = Math.round(Math.min(pv.t, totalDur()) * 10) / 10;
+      platform.saveBlob(blob, base + "_" + curTarget().suffix + "_frame-" + at + "s.png").then(function(r){
+        // a failed save must never look like success (mirrors dlResult / cards.ts)
+        if(r === "failed"){
+          const b = $("pvFrameBtn"), old = b.textContent;
+          b.textContent = "✕"; b.title = "Couldn't save — check disk space";
+          setTimeout(function(){ b.textContent = old; b.title = "Save this frame as PNG — e.g. a cover matching the video"; }, 1800);
+        }
+      });
+    }, "image/png");
+  };
+
   $("selAll").onclick = function(){
     if(app.vbusy) return;
-    const all = app.items.length > 0 && app.seq.length === app.items.length;
+    const all = app.items.length > 0 && app.items.every(function(it){ return !!it.selected; });
+    // whole select-all / select-none is ONE undo step, not one per photo
+    beginOp();
     app.items.forEach(function(it){ setSelected(it, !all); });
+    commitOp();
   };
 
   $("exportBtn").onclick = async function(){

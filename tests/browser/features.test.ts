@@ -134,33 +134,28 @@ describe("per-clip overrides", () => {
   });
 });
 
-describe("video photo fit (Framed / Fill / Fit)", () => {
-  // a wide 80×20 original drawn into a tall 40×80 frame
-  function wideItem(): Item {
-    const src = noiseCanvas(80, 20);
-    const item = fakeItem(1, src);
-    item.img = src as unknown as HTMLImageElement; // use the canvas as the "original"
-    item.iw = 80; item.ih = 20;
-    return item;
-  }
+describe("per-photo framed vs original in the video", () => {
   function blackCount(cv: HTMLCanvasElement): number {
     const px = pixelsOf(cv); let b = 0;
     for (let i = 0; i < px.length; i += 4) if (px[i] === 0 && px[i + 1] === 0 && px[i + 2] === 0 && px[i + 3] === 255) b++;
     return b;
   }
-  it('"fill" crops the original to cover the frame — no letterbox bars', () => {
-    S.vfit = "fill";
+  it("an UNFRAMED photo (framed=false) draws the whole original, no fills", () => {
+    // a wide 80×20 original into a tall 40×80 frame → letterboxed (fit), rest black
+    const src = noiseCanvas(80, 20);
+    const item = fakeItem(1, src);
+    item.img = src as unknown as HTMLImageElement; item.iw = 80; item.ih = 20;
+    item.framed = false; // Video-tab photo → original
     const out = document.createElement("canvas"); out.width = 40; out.height = 80;
-    drawClipFrame(out.getContext("2d")!, 40, 80, wideItem(), 0);
-    // cover scale = max(40/80, 80/20) = 4 → image fills the whole frame
-    expect(blackCount(out)).toBeLessThan(40 * 80 * 0.02);
-  });
-  it('"fit" shows the whole original on black bars', () => {
-    S.vfit = "fit";
-    const out = document.createElement("canvas"); out.width = 40; out.height = 80;
-    drawClipFrame(out.getContext("2d")!, 40, 80, wideItem(), 0);
-    // contain scale = min(40/80, 80/20) = 0.5 → a 40×10 strip centered, the rest black
+    drawClipFrame(out.getContext("2d")!, 40, 80, item, 0);
     expect(blackCount(out)).toBeGreaterThan(40 * 80 * 0.5);
+  });
+  it("a FRAMED photo (default) uses the framed canvas 1:1, not the original", () => {
+    const src = noiseCanvas(40, 80); // exact frame size
+    const item = fakeItem(1, src); // framed undefined → framed path
+    const out = document.createElement("canvas"); out.width = 40; out.height = 80;
+    drawClipFrame(out.getContext("2d")!, 40, 80, item, 0);
+    expect(countDiffs(pixelsOf(out), pixelsOf(src))).toBe(0);
   });
 });
 

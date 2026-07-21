@@ -130,7 +130,7 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
   for (let i = 0; i < saved.items.length; i++) {
     const si = saved.items[i];
     const f = new File([si.blob], si.name, { type: si.blob.type || "image/png" });
-    const it = await loadFile(f);
+    const it = await loadFile(f, typeof si.framed === "boolean" ? si.framed : undefined);
     if (!it) failures++;
     loaded.push(it);
   }

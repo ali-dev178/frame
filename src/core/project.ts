@@ -9,7 +9,7 @@ import { idbDel, idbGet, idbSet } from "./idb";
  * guarantee survives a round-trip untouched.
  */
 
-export interface SavedItem { name: string; blob: Blob }
+export interface SavedItem { name: string; blob: Blob; framed?: boolean }
 export interface SavedClip { idx: number; dur: number; text?: string; motion?: string; look?: string; trans?: string; card?: TitleCard }
 export interface SavedTrack { name: string; blob: Blob; start: number; end: number; at: number; lane: number; gain?: number; fadeIn?: number; fadeOut?: number; duck?: boolean }
 export interface SavedProject {
@@ -61,7 +61,7 @@ export function serialize(): SavedProject {
     v: 1,
     savedAt: Date.now(),
     S: JSON.parse(JSON.stringify(S)) as Settings,
-    items: app.items.map(function (it) { return { name: it.name, blob: it.file as Blob }; }),
+    items: app.items.map(function (it) { return { name: it.name, blob: it.file as Blob, framed: it.framed }; }),
     seq: app.seq
       .map(function (c) {
         return { idx: c.card ? -1 : app.items.findIndex(function (i) { return i.id === c.id; }), dur: c.dur, text: c.text,

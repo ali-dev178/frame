@@ -1,4 +1,3 @@
-import { S } from "../state";
 import { $ } from "./dom";
 import { renderTimeline } from "./timeline";
 
@@ -23,16 +22,8 @@ export function setMode(m: "frame" | "video"): void {
   $("navVideo").setAttribute("aria-current", v ? "page" : "false");
   $("framePanel").style.display = v ? "none" : "";
   $("videoPanel").style.display = v ? "" : "none";
-  $("grid").classList.toggle("vmode", v); // video tab: cards preview the ORIGINAL photo
-  syncGridFit();
+  $("grid").classList.toggle("vmode", v); // video tab: cards preview per-photo (original vs framed)
   if (v) renderTimeline(); // the timeline can only size itself once it's visible
-}
-
-/** Re-apply the photo-fit class so the video-tab cards match the video render. */
-export function syncGridFit(): void {
-  const g = $("grid");
-  g.classList.remove("vfit", "vfill", "vframed");
-  if (mode === "video") g.classList.add("v" + (S.vfit || "framed"));
 }
 
 export function initMode(): void {

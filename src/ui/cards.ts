@@ -9,6 +9,7 @@ import { S, app, curTarget } from "../state";
 import type { Item } from "../types";
 import { $ } from "./dom";
 import { invalidateResult, setSelected, studioOnFrameChange, updateSelUI } from "./studio";
+import { currentMode } from "./mode";
 import { renderTimeline } from "./timeline";
 
 const grid = $("grid"), empty = $("empty"), bar = $("bar"), countEl = $("count");
@@ -42,14 +43,16 @@ function addFiles(list: FileList): void {
   Array.from(list).filter(function(f){ return /^image\//.test(f.type); }).forEach(function(f){ loadFile(f); });
 }
 
-/** Loads one image file into the grid; resolves with the item (null on failure). */
-export function loadFile(f: File): Promise<Item | null> {
+/** Loads one image file into the grid; resolves with the item (null on failure).
+ *  `framed` overrides the default (Frame tab → framed, Video tab → original). */
+export function loadFile(f: File, framed?: boolean): Promise<Item | null> {
   return new Promise(function(resolve){
     const url = URL.createObjectURL(f);
     const img = new Image();
     img.onload = function(){
       const id = ++app.idc;
       const it: Item = { id:id, name:f.name || ("image-"+id), file:f, img:img, iw:img.naturalWidth, ih:img.naturalHeight, edges:null, grad:null, canvas:null, el:null };
+      it.framed = (framed !== undefined) ? framed : (currentMode() !== "video");
       try { computeColors(it); } catch(e){ it.edges=null; it.grad=null; }
       app.items.push(it);
       createCard(it);
@@ -71,12 +74,19 @@ function createCard(it: Item): void {
     '<div class="stage"><div class="frame"><img class="vpreview" alt=""><div class="bounds"></div></div>' +
       '<label class="pick" title="Add to video"><input type="checkbox"></label></div>' +
     '<div class="meta"><div class="name"></div><div class="dims"></div></div>' +
-    '<div class="foot"><button class="btn primary dl">Download PNG</button>' +
+    '<div class="foot"><button class="btn frmtoggle" title="Frame this photo (fill margins) or use the original in the video">Framed</button>' +
+    '<button class="btn primary dl">Download PNG</button>' +
     '<button class="btn vfy" title="Check the picture region is bit-identical to your upload">Verify</button>' +
     '<button class="btn rm" title="Remove">Remove</button></div>';
   card.querySelector(".name")!.textContent = it.name;
   it.vurl = URL.createObjectURL(it.file); // original shown in the video tab (no fills)
   (card.querySelector(".vpreview") as HTMLImageElement).src = it.vurl;
+  const frm = card.querySelector(".frmtoggle") as HTMLButtonElement;
+  frm.onclick = function(){
+    it.framed = !it.framed;
+    syncCardFrame(it);
+    renderTimeline(); invalidateResult(); markDirty(); // the video source for this photo changed
+  };
   (card.querySelector(".vfy") as HTMLButtonElement).onclick = function(){ verifyItem(it); };
   const pick = card.querySelector(".pick input") as HTMLInputElement;
   pick.addEventListener("change", function(){
@@ -104,6 +114,16 @@ function createCard(it: Item): void {
   };
   grid.appendChild(card);
   it.el = card;
+  syncCardFrame(it);
+}
+
+/** Reflect a photo's framed/original choice on its card (class + toggle label). */
+export function syncCardFrame(it: Item): void {
+  if(!it.el) return;
+  const framed = it.framed !== false;
+  it.el.classList.toggle("orig", !framed);
+  const frm = it.el.querySelector(".frmtoggle") as HTMLButtonElement | null;
+  if(frm) frm.textContent = framed ? "Framed" : "Original";
 }
 
 export function renderItem(it: Item): void {

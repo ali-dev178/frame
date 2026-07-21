@@ -142,11 +142,14 @@ input[type=range]::-moz-range-thumb{
 .stage .frame{position:relative;line-height:0;box-shadow:0 6px 22px rgba(0,0,0,.5)}
 .stage canvas{display:block;max-width:100%;height:auto;border-radius:2px}
 .bounds{position:absolute;pointer-events:none;border:1px dashed rgba(201,162,75,.95);box-shadow:0 0 0 1px rgba(0,0,0,.4);display:none}
-/* video tab (Fill/Fit): the card shows the whole ORIGINAL photo at its own ratio —
-   no frame-tool fills, no framed dims/download */
+/* video tab: a photo marked ".orig" (framed === false) shows the whole ORIGINAL at
+   its own ratio — no frame-tool fills; a framed photo keeps its framed preview */
 .card .vpreview{display:none}
-.grid.vmode.vfit .stage .frame > canvas,.grid.vmode.vfill .stage .frame > canvas{display:none}
-.grid.vmode.vfit .vpreview,.grid.vmode.vfill .vpreview{display:block;width:100%;height:auto;border-radius:2px}
+.frmtoggle{display:none}
+.grid.vmode .frmtoggle{display:block;flex:1}
+.grid.vmode .card:not(.orig) .frmtoggle{border-color:var(--brass);color:var(--brass);font-weight:600}
+.grid.vmode .card.orig .stage .frame > canvas{display:none}
+.grid.vmode .card.orig .vpreview{display:block;width:100%;height:auto;border-radius:2px}
 .grid.vmode .bounds{display:none}
 .grid.vmode .dims,.grid.vmode .dl,.grid.vmode .vfy{display:none}
 .bounds.on{display:block}

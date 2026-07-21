@@ -23,17 +23,21 @@ export interface ClipBounds {
 
 /** Output size = the largest clip's canvas, rounded up to even (encoder requirement). */
 export function outDims(): { W: number; H: number } {
-  let W = 0, H = 0;
-  const framed = (S.vfit || "framed") === "framed";
+  // If ANY clip is a framed photo, the video takes the framed (social) ratio and
+  // original clips fit into it; if ALL clips are original, the video takes the
+  // originals' own ratio (so same-shape photos fill edge-to-edge, no margins).
+  let fW = 0, fH = 0, oW = 0, oH = 0, anyFramed = false;
   app.seq.forEach(function(c){
     const it = byId(c.id);
     if(!it) return;
-    if(framed){
-      if(it.canvas && it.canvas.width > W){ W = it.canvas.width; H = it.canvas.height; }
-    } else if(it.iw > W){
-      W = it.iw; H = it.ih; // Fill/Fit: the video matches the ORIGINAL photos, not the frame ratio
+    if(it.framed !== false){
+      anyFramed = true;
+      if(it.canvas && it.canvas.width > fW){ fW = it.canvas.width; fH = it.canvas.height; }
+    } else if(it.iw > oW){
+      oW = it.iw; oH = it.ih;
     }
   });
+  let W = anyFramed ? fW : oW, H = anyFramed ? fH : oH;
   if(!W && app.seq.some(function(c){ return !!c.card; })){
     // a title card with no framed photo to size against — size from the target
     // ratio, 1080 on the shorter side (a canvas-less photo clip still yields 0×0)
@@ -92,8 +96,8 @@ export function drawClipFrame(c2: CanvasRenderingContext2D, W: number, H: number
   if(!it){ c2.fillStyle="#000"; c2.fillRect(0,0,W,H); return; }
   const mo = motion || S.motion;             // per-clip override → global default
   const lk = LOOK_FILTERS[look || S.look] || "";
-  const fit = S.vfit || "framed";
-  if(fit !== "framed" && it.img){ drawOriginalFit(c2, W, H, it, p, mo, lk, fit); return; }
+  // per-photo: a Video-tab photo (framed === false) uses the ORIGINAL, no fills
+  if(it.framed === false && it.img){ drawOriginalFit(c2, W, H, it, p, mo, lk, "fit"); return; }
   if(!it.canvas){ c2.fillStyle="#000"; c2.fillRect(0,0,W,H); return; } // framed mode needs the canvas
   const src = it.canvas;
   const cover = Math.max(W / src.width, H / src.height);

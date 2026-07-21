@@ -102,6 +102,9 @@ export interface Item {
   thumbUrl?: string | null;
   /** Object URL of the ORIGINAL file — the video-tab card preview (no fills). */
   vurl?: string;
+  /** Whether the VIDEO frames this photo (fills) or uses the original. Defaults
+   *  true for photos added in the Frame tab, false for the Video tab. */
+  framed?: boolean;
   selected?: boolean;
 }
 

@@ -147,10 +147,12 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
-    // fullscreen (the preview button) + microphone (voiceover recording); nothing else
-    session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
-      cb(permission === "fullscreen" || permission === "media");
-    });
+    // fullscreen (the preview button) + microphone (voiceover recording); nothing else.
+    // getUserMedia in Electron consults BOTH the async request handler AND the
+    // synchronous check handler — without the latter, mic access is denied silently.
+    const allow = (permission: string) => permission === "fullscreen" || permission === "media";
+    session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => { cb(allow(permission)); });
+    session.defaultSession.setPermissionCheckHandler((_wc, permission) => allow(permission));
 
     if (process.platform === "darwin") {
       Menu.setApplicationMenu(Menu.buildFromTemplate([

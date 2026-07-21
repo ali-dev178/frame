@@ -45,10 +45,13 @@ export function initSoundtrack(): void {
     if(mediaRec && mediaRec.state !== "inactive"){ mediaRec.stop(); return; } // toggle off
     const md = navigator.mediaDevices;
     if(!md || !md.getUserMedia || typeof MediaRecorder === "undefined"){
-      $("musicDur").textContent = "Microphone recording isn't available in this browser.";
+      $("musicDur").textContent = "Microphone recording isn't available here.";
       return;
     }
+    recBtn.disabled = true; // guard against a double-click while the mic opens
+    $("musicDur").textContent = "Starting microphone…";
     md.getUserMedia({ audio: true }).then(function(stream){
+      recBtn.disabled = false;
       micStream = stream;
       const chunks: Blob[] = [];
       const rec = new MediaRecorder(stream);
@@ -58,17 +61,24 @@ export function initSoundtrack(): void {
         if(micStream){ micStream.getTracks().forEach(function(tr){ tr.stop(); }); micStream = null; }
         recBtn.classList.remove("rec"); recBtn.textContent = "● Voiceover"; mediaRec = null;
         const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
-        if(blob.size) addRecordedVoice(new File([blob], "Voiceover", { type: blob.type }));
+        if(blob.size){ $("musicDur").textContent = "Adding your voiceover…"; addRecordedVoice(new File([blob], "Voiceover", { type: blob.type })); }
+        else $("musicDur").textContent = "Nothing was recorded — try again.";
       };
       rec.start();
-      recBtn.classList.add("rec"); recBtn.textContent = "■ Stop";
-    }).catch(function(){
-      // reject OR a throw from new MediaRecorder()/start() after the stream was
-      // acquired — never leave the mic live or the recorder half-open
+      recBtn.classList.add("rec"); recBtn.textContent = "■ Stop recording";
+      $("musicDur").textContent = "Recording… click “Stop recording” when you’re done.";
+    }).catch(function(err){
+      // reject OR a throw from new MediaRecorder()/start() — never leave the mic live
+      recBtn.disabled = false;
       if(micStream){ micStream.getTracks().forEach(function(tr){ tr.stop(); }); micStream = null; }
       mediaRec = null;
       recBtn.classList.remove("rec"); recBtn.textContent = "● Voiceover";
-      $("musicDur").textContent = "Couldn't start recording — check microphone permissions.";
+      console.error("voiceover recording failed:", err);
+      const nm = (err && (err as { name?: string }).name) || "";
+      $("musicDur").textContent =
+        (nm === "NotAllowedError" || nm === "SecurityError") ? "Microphone blocked — allow mic access for this app in your system settings, then try again."
+        : (nm === "NotFoundError") ? "No microphone found — connect one and try again."
+        : "Couldn't start recording (" + (nm || "unknown error") + ").";
     });
   };
 }

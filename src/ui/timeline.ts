@@ -401,8 +401,7 @@ function showClipTool(): void {
   const bg = $<HTMLInputElement>("ctBg"), fg = $<HTMLInputElement>("ctFg");
   txt.style.display = isCard ? "none" : "";
   titleIn.style.display = isCard ? "" : "none";
-  bg.style.display = isCard ? "" : "none";
-  fg.style.display = isCard ? "" : "none";
+  $("ctColorGrp").style.display = isCard ? "" : "none";
   // resync the active text field when the SELECTED CLIP changes, even while it has
   // focus, so a clip switch doesn't leave the old value editable into the new clip
   if(isCard){
@@ -462,10 +461,7 @@ function updateAudioToolLbl(): void {
   let lbl = shortName(t.name) + " · " + fmtTime(t.end - t.start) + " · at " + fmtTime(t.at);
   if(t.start > 0.05) lbl += " · from " + fmtTime(t.start);
   if(t.end < t.dur - 0.05) lbl += " · to " + fmtTime(t.end);
-  lbl += " · vol " + Math.round(vol * 100) + "%";
-  if(t.fadeIn) lbl += " · in " + t.fadeIn + "s";
-  if(t.fadeOut) lbl += " · out " + t.fadeOut + "s";
-  if(t.duck) lbl += " · duck";
+  lbl += " · vol " + Math.round(vol * 100) + "%"; // fade/duck are shown by their own controls
   $("audiotoolLbl").textContent = lbl;
 }
 function showAudioTool(): void {

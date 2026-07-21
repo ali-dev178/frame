@@ -135,51 +135,54 @@
         <div class="playhead" id="playhead"></div>
       </div>
     </div>
+    <!-- contextual: shown when a photo clip is selected -->
     <div class="cliptool" id="cliptool" style="display:none">
-      <span class="sub" id="cliptoolLbl"></span>
-      <button class="cbtn" id="ctL" title="Move earlier">◀</button>
-      <button class="cbtn" id="ctR" title="Move later">▶</button>
-      <button class="cbtn" id="ctM" title="1s shorter">−</button>
-      <button class="cbtn" id="ctP" title="1s longer">+</button>
-      <button class="cbtn" id="ctD" title="Duplicate clip (D)">⧉</button>
-      <button class="cbtn" id="ctX" title="Remove clip (Del)">✕</button>
-      <select class="csel" id="ctMotion" title="Motion for this clip"></select>
-      <select class="csel" id="ctLook" title="Color look for this clip"></select>
-      <select class="csel" id="ctTrans" title="Transition after this clip"></select>
+      <span class="sub tfull" id="cliptoolLbl"></span>
+      <span class="tgrp"><span class="tlab">Order</span>
+        <button class="cbtn" id="ctL" title="Move earlier">◀</button>
+        <button class="cbtn" id="ctR" title="Move later">▶</button>
+      </span>
+      <span class="tgrp"><span class="tlab">Length</span>
+        <button class="cbtn" id="ctM" title="1 second shorter">−</button>
+        <button class="cbtn" id="ctP" title="1 second longer">+</button>
+      </span>
+      <span class="tgrp">
+        <button class="cbtn" id="ctD" title="Duplicate clip (D)">⧉</button>
+        <button class="cbtn" id="ctX" title="Remove clip (Del)">✕</button>
+      </span>
+      <span class="tgrp" id="ctStyleGrp"><span class="tlab">Style</span>
+        <select class="csel" id="ctMotion" title="Motion for this clip"></select>
+        <select class="csel" id="ctLook" title="Colour look for this clip"></select>
+        <select class="csel" id="ctTrans" title="Transition after this clip"></select>
+      </span>
       <input type="text" class="txt capInput" id="ctText" placeholder="Caption for this clip…" maxlength="80">
       <input type="text" class="txt capInput" id="ctTitle" placeholder="Title text…" maxlength="120" style="display:none">
-      <input type="color" class="ccolor" id="ctBg" title="Background colour" value="#101010" style="display:none">
-      <input type="color" class="ccolor" id="ctFg" title="Text colour" value="#ffffff" style="display:none">
+      <span class="tgrp" id="ctColorGrp" style="display:none"><span class="tlab">Colours</span>
+        <input type="color" class="ccolor" id="ctBg" title="Background colour" value="#101010">
+        <input type="color" class="ccolor" id="ctFg" title="Text colour" value="#ffffff">
+      </span>
     </div>
+    <!-- contextual: shown when an audio piece is selected -->
     <div class="cliptool" id="audiotool" style="display:none">
-      <span class="sub" id="audiotoolLbl"></span>
-      <button class="cbtn" id="atS" title="Split at playhead (S)">✂</button>
-      <button class="cbtn" id="atD" title="Duplicate (D)">⧉</button>
-      <button class="cbtn" id="atX" title="Remove (Del)">✕</button>
-      <span class="sub">vol</span>
-      <input type="range" id="atVol" class="atvol" min="0" max="100" step="1" title="Volume of this audio piece">
-      <span class="sub">fade</span>
-      <input type="number" id="atFadeIn" class="afade" min="0" max="30" step="0.1" title="Fade-in seconds">
-      <input type="number" id="atFadeOut" class="afade" min="0" max="30" step="0.1" title="Fade-out seconds">
-      <label class="aduck" title="Auto-lower this track while other (voice) tracks play"><input type="checkbox" id="atDuck"> duck</label>
+      <span class="sub tfull" id="audiotoolLbl"></span>
+      <span class="tgrp">
+        <button class="cbtn" id="atS" title="Split at the playhead (S)">✂</button>
+        <button class="cbtn" id="atD" title="Duplicate (D)">⧉</button>
+        <button class="cbtn" id="atX" title="Remove (Del)">✕</button>
+      </span>
+      <span class="tgrp"><span class="tlab">Volume</span>
+        <input type="range" id="atVol" class="atvol" min="0" max="100" step="1" title="Volume of this audio piece">
+      </span>
+      <span class="tgrp"><span class="tlab">Fade in / out (s)</span>
+        <input type="number" id="atFadeIn" class="afade" min="0" max="30" step="0.1" title="Fade-in seconds">
+        <input type="number" id="atFadeOut" class="afade" min="0" max="30" step="0.1" title="Fade-out seconds">
+      </span>
+      <label class="aduck tgrp" title="Automatically lower this track while other (voice) tracks play"><input type="checkbox" id="atDuck"> Duck under voice</label>
     </div>
     <div class="hintline" id="seqHint">Tick photos above to add them here — then set the order and how long each one shows.</div>
 
-    <div class="stitle sec">Soundtrack</div>
-    <div class="music" id="music">
-      <span class="note">♪</span>
-      <div class="info">
-        <div class="n" id="musicName">No music loaded</div>
-        <div class="d" id="musicDur">Drop audio files here, or choose — several play one after another</div>
-      </div>
-      <div class="spacer"></div>
-      <button type="button" class="chip" id="fitMusic">Match clips to music</button>
-      <button class="btn" id="recVoice" type="button" title="Record a voiceover from your microphone">● Voiceover</button>
-      <button class="btn" id="musicPick" type="button">Add music</button>
-      <input type="file" id="audioFile" accept="audio/*" multiple hidden>
-    </div>
-
-    <div class="rows sec">
+    <div class="stitle sec">Video</div>
+    <div class="rows">
       <div class="field">
         <span class="lbl">Motion</span>
         <div class="seg" id="segMotion" role="group" aria-label="Motion"></div>
@@ -197,16 +200,27 @@
         <span class="sub" id="lookHint"></span>
       </div>
       <div class="field">
-        <span class="lbl">Video quality</span>
+        <span class="lbl">Quality</span>
         <div class="seg" id="segVQuality" role="group" aria-label="Video quality"></div>
         <span class="sub">Ultra encodes at 40 Mbps — far beyond visible loss.</span>
       </div>
-      <div class="field">
-        <span class="lbl">Audio</span>
-        <label class="toggle"><input type="checkbox" id="vfade"><span class="switch"></span>Fade in / out</label>
-        <span class="sub">Smoothly ramps the music at the start and end.</span>
-      </div>
     </div>
+
+    <div class="stitle sec">Soundtrack</div>
+    <div class="music" id="music">
+      <span class="note">♪</span>
+      <div class="info">
+        <div class="n" id="musicName">No music loaded</div>
+        <div class="d" id="musicDur">Drop audio files here, or choose — several play one after another</div>
+      </div>
+      <div class="spacer"></div>
+      <button type="button" class="chip" id="fitMusic">Match clips to music</button>
+      <button class="btn" id="recVoice" type="button" title="Record a voiceover from your microphone">● Voiceover</button>
+      <button class="btn" id="musicPick" type="button">Add music</button>
+      <input type="file" id="audioFile" accept="audio/*" multiple hidden>
+    </div>
+    <label class="toggle arow"><input type="checkbox" id="vfade"><span class="switch"></span>Fade music in / out</label>
+    <span class="sub asub">Smoothly ramps the whole soundtrack at the start and end.</span>
 
     <div class="selbar">
       <span class="selinfo" id="selInfo"></span>

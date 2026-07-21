@@ -99,6 +99,9 @@ input[type=range]::-moz-range-thumb{
 .btn.primary{background:var(--brass);border-color:var(--brass);color:#211a08;font-weight:600}
 .btn.primary:hover{background:#d8b25c}
 .btn.ghost{background:transparent}
+.btn.accent{border-color:var(--brass);color:var(--brass);font-weight:600}
+.btn.accent:hover{background:var(--brass);border-color:var(--brass);color:#211a08}
+.vhide{margin-left:auto;font-size:12px;padding:5px 12px;align-self:center;text-transform:none;letter-spacing:normal}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}

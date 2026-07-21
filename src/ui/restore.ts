@@ -7,7 +7,7 @@ import { MAX_CLIP, S, app } from "../state";
 import type { Clip, Item, Settings, TitleCard } from "../types";
 import { loadFile, syncBars } from "./cards";
 import { initControls } from "./controls";
-import { initStudio, syncItemSelection, updateSelUI } from "./studio";
+import { initStudio, setVideoOpen, syncItemSelection, updateSelUI } from "./studio";
 import { renderTimeline } from "./timeline";
 import { refreshAudioUI } from "./soundtrack";
 
@@ -175,9 +175,10 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
   }
 
   refreshAudioUI();
-  syncBars(); // a card-only project has no photos → show the panel from app.seq
+  syncBars();
   renderTimeline();
   updateSelUI();
+  if(app.seq.length) setVideoOpen(true); // a restored session with a video re-opens the editor
   clearHistory(); // the restored state is the new baseline — nothing to undo into
   return failures;
 }

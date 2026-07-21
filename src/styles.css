@@ -142,11 +142,13 @@ input[type=range]::-moz-range-thumb{
 .stage .frame{position:relative;line-height:0;box-shadow:0 6px 22px rgba(0,0,0,.5)}
 .stage canvas{display:block;max-width:100%;height:auto;border-radius:2px}
 .bounds{position:absolute;pointer-events:none;border:1px dashed rgba(201,162,75,.95);box-shadow:0 0 0 1px rgba(0,0,0,.4);display:none}
-/* video tab: overlay the ORIGINAL photo on the card, fit exactly like the video */
-.card .vpreview{display:none;position:absolute;inset:0;width:100%;height:100%;background:#000;border-radius:2px;z-index:2}
-.grid.vmode.vfill .vpreview{display:block;object-fit:cover}
-.grid.vmode.vfit .vpreview{display:block;object-fit:contain}
+/* video tab (Fill/Fit): the card shows the whole ORIGINAL photo at its own ratio —
+   no frame-tool fills, no framed dims/download */
+.card .vpreview{display:none}
+.grid.vmode.vfit .stage .frame > canvas,.grid.vmode.vfill .stage .frame > canvas{display:none}
+.grid.vmode.vfit .vpreview,.grid.vmode.vfill .vpreview{display:block;width:100%;height:auto;border-radius:2px}
 .grid.vmode .bounds{display:none}
+.grid.vmode .dims,.grid.vmode .dl,.grid.vmode .vfy{display:none}
 .bounds.on{display:block}
 /* the dashed border alone marks the untouched original — any text label
    collides with artwork/controls at small card sizes */

@@ -24,9 +24,15 @@ export interface ClipBounds {
 /** Output size = the largest clip's canvas, rounded up to even (encoder requirement). */
 export function outDims(): { W: number; H: number } {
   let W = 0, H = 0;
+  const framed = (S.vfit || "framed") === "framed";
   app.seq.forEach(function(c){
     const it = byId(c.id);
-    if(it && it.canvas && it.canvas.width > W){ W = it.canvas.width; H = it.canvas.height; }
+    if(!it) return;
+    if(framed){
+      if(it.canvas && it.canvas.width > W){ W = it.canvas.width; H = it.canvas.height; }
+    } else if(it.iw > W){
+      W = it.iw; H = it.ih; // Fill/Fit: the video matches the ORIGINAL photos, not the frame ratio
+    }
   });
   if(!W && app.seq.some(function(c){ return !!c.card; })){
     // a title card with no framed photo to size against — size from the target
@@ -83,11 +89,12 @@ function drawOriginalFit(c2: CanvasRenderingContext2D, W: number, H: number, it:
 }
 
 export function drawClipFrame(c2: CanvasRenderingContext2D, W: number, H: number, it: Item | null, p: number, motion?: string, look?: string): void {
-  if(!it || !it.canvas){ c2.fillStyle="#000"; c2.fillRect(0,0,W,H); return; }
+  if(!it){ c2.fillStyle="#000"; c2.fillRect(0,0,W,H); return; }
   const mo = motion || S.motion;             // per-clip override → global default
   const lk = LOOK_FILTERS[look || S.look] || "";
   const fit = S.vfit || "framed";
   if(fit !== "framed" && it.img){ drawOriginalFit(c2, W, H, it, p, mo, lk, fit); return; }
+  if(!it.canvas){ c2.fillStyle="#000"; c2.fillRect(0,0,W,H); return; } // framed mode needs the canvas
   const src = it.canvas;
   const cover = Math.max(W / src.width, H / src.height);
   if(mo === "static" && W >= src.width && (W - src.width) <= 1 && H >= src.height && (H - src.height) <= 1){

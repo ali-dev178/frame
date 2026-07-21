@@ -1,6 +1,6 @@
 import { LOOK_FILTERS } from "../core/config";
-import { S, app, byId } from "../state";
-import type { Item } from "../types";
+import { S, app, byId, curTarget } from "../state";
+import type { Item, TitleCard } from "../types";
 
 /**
  * THE single frame renderer: preview, fast export, and the recording
@@ -17,6 +17,8 @@ export interface ClipBounds {
   look: string;
   /** Effective transition OUT of this clip into the next. */
   trans: string;
+  /** Set when this clip is a title card (no source photo). */
+  card?: TitleCard;
 }
 
 /** Output size = the largest clip's canvas, rounded up to even (encoder requirement). */
@@ -26,6 +28,12 @@ export function outDims(): { W: number; H: number } {
     const it = byId(c.id);
     if(it && it.canvas && it.canvas.width > W){ W = it.canvas.width; H = it.canvas.height; }
   });
+  if(!W && app.seq.some(function(c){ return !!c.card; })){
+    // a title card with no framed photo to size against — size from the target
+    // ratio, 1080 on the shorter side (a canvas-less photo clip still yields 0×0)
+    const r = Math.max(0.01, curTarget().r);
+    if(r >= 1){ H = 1080; W = Math.round(1080 * r); } else { W = 1080; H = Math.round(1080 / r); }
+  }
   W += W % 2; H += H % 2;
   return { W: W, H: H };
 }
@@ -35,7 +43,7 @@ export function clipBoundsAt(t: number): { bs: ClipBounds[]; i: number } {
   let acc = 0;
   app.seq.forEach(function(c){
     bs.push({ it: byId(c.id), start: acc, dur: c.dur,
-              motion: c.motion || S.motion, look: c.look || S.look, trans: c.trans || S.trans });
+              motion: c.motion || S.motion, look: c.look || S.look, trans: c.trans || S.trans, card: c.card });
     acc += c.dur;
   });
   let i = 0;
@@ -81,46 +89,84 @@ export function drawClipFrame(c2: CanvasRenderingContext2D, W: number, H: number
   c2.filter = "none";
 }
 
+/** Word-wrap `text` to `maxW` using the context's current font. */
+function wrapText(c2: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  words.forEach(function(w){
+    const test = cur ? cur + " " + w : w;
+    if(cur && c2.measureText(test).width > maxW){ lines.push(cur); cur = w; }
+    else cur = test;
+  });
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+/** A title card: centered, word-wrapped text on a solid background. */
+export function drawTitleCard(c2: CanvasRenderingContext2D, W: number, H: number, card: TitleCard): void {
+  c2.fillStyle = card.bg || "#101010";
+  c2.fillRect(0, 0, W, H);
+  const text = (card.text || "").trim();
+  if(!text) return;
+  const size = Math.max(16, Math.round(H * 0.085));
+  c2.save();
+  c2.fillStyle = card.fg || "#ffffff";
+  c2.textAlign = "center"; c2.textBaseline = "middle";
+  c2.font = "700 " + size + 'px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  const lines = wrapText(c2, text, W * 0.84);
+  const lh = size * 1.22;
+  const startY = H/2 - (lines.length - 1) * lh / 2;
+  lines.forEach(function(ln, i){ c2.fillText(ln, W/2, startY + i*lh, W * 0.9); });
+  c2.restore();
+}
+
+/** Draw one clip: a title card, or a framed photo through drawClipFrame. */
+function drawClipVisual(c2: CanvasRenderingContext2D, W: number, H: number, b: ClipBounds, p: number): void {
+  if(b.card) drawTitleCard(c2, W, H, b.card);
+  else drawClipFrame(c2, W, H, b.it, p, b.motion, b.look);
+}
+
 export function drawBlend(c2: CanvasRenderingContext2D, W: number, H: number, A: ClipBounds, B: ClipBounds, q: number, t: number, trans: string): void {
   q = Math.min(1, Math.max(0, q));
   const e = q*q*(3 - 2*q);   // ease in-out
   const pA = prog(A, t), pB = prog(B, t);
   if(trans === "fadeblack"){
     if(e < 0.5){
-      drawClipFrame(c2, W, H, A.it, pA, A.motion, A.look);
+      drawClipVisual(c2, W, H, A, pA);
       c2.fillStyle = "rgba(0,0,0," + (e*2) + ")"; c2.fillRect(0,0,W,H);
     } else {
-      drawClipFrame(c2, W, H, B.it, pB, B.motion, B.look);
+      drawClipVisual(c2, W, H, B, pB);
       c2.fillStyle = "rgba(0,0,0," + ((1-e)*2) + ")"; c2.fillRect(0,0,W,H);
     }
     return;
   }
-  drawClipFrame(c2, W, H, A.it, pA, A.motion, A.look);
+  drawClipVisual(c2, W, H, A, pA);
   if(trans === "slide"){
     c2.save(); c2.translate(W*(1-e), 0);
-    drawClipFrame(c2, W, H, B.it, pB, B.motion, B.look);
+    drawClipVisual(c2, W, H, B, pB);
     c2.restore(); return;
   }
   if(trans === "slideup"){
     c2.save(); c2.translate(0, H*(1-e));
-    drawClipFrame(c2, W, H, B.it, pB, B.motion, B.look);
+    drawClipVisual(c2, W, H, B, pB);
     c2.restore(); return;
   }
   if(trans === "wipe"){
     c2.save(); c2.beginPath(); c2.rect(0, 0, W*e, H); c2.clip();
-    drawClipFrame(c2, W, H, B.it, pB, B.motion, B.look);
+    drawClipVisual(c2, W, H, B, pB);
     c2.restore(); return;
   }
   if(trans === "iris"){
     c2.save(); c2.beginPath();
     c2.arc(W/2, H/2, Math.max(0.01, e * Math.hypot(W/2, H/2)), 0, Math.PI*2);
     c2.clip();
-    drawClipFrame(c2, W, H, B.it, pB, B.motion, B.look);
+    drawClipVisual(c2, W, H, B, pB);
     c2.restore(); return;
   }
   // crossfade (default)
   c2.globalAlpha = e;
-  drawClipFrame(c2, W, H, B.it, pB, B.motion, B.look);
+  drawClipVisual(c2, W, H, B, pB);
   c2.globalAlpha = 1;
 }
 
@@ -181,6 +227,6 @@ export function drawAtTime(c2: CanvasRenderingContext2D, W: number, H: number, t
       }
     }
   }
-  drawClipFrame(c2, W, H, bs[i].it, prog(bs[i], t), bs[i].motion, bs[i].look);
+  drawClipVisual(c2, W, H, bs[i], prog(bs[i], t));
   drawCaption(c2, W, H, capOf(i), 1);
 }

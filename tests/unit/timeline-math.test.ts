@@ -86,4 +86,12 @@ describe("outDims", () => {
     app.seq = [{ id: 1, dur: 4 }];
     expect(outDims()).toEqual({ W: 0, H: 0 });
   });
+  it("falls back to the target ratio for a title-card-only timeline", () => {
+    // default target is IG 4:5 → r=0.8 → 1080 × 1350 (even)
+    app.items = [];
+    app.seq = [{ uid: 1, id: 0, dur: 3, card: { text: "Hi", bg: "#000000", fg: "#ffffff" } }];
+    const d = outDims();
+    expect(d.W).toBe(1080);
+    expect(d.H).toBe(1350);
+  });
 });

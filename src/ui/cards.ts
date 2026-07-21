@@ -234,6 +234,8 @@ export function syncBars(): void {
   empty.style.display = n ? "none" : "";
   (bar as HTMLElement & { hidden: boolean }).hidden = !n;
   countEl.textContent = n + (n===1 ? " photo" : " photos") + " ready";
-  $("videoPanel").style.display = n ? "" : "none";
+  // show the video panel whenever there is ANYTHING on the timeline — a
+  // title-card-only project has clips but no photos and must stay visible
+  $("videoPanel").style.display = (n || app.seq.length) ? "" : "none";
   updateSelUI();
 }

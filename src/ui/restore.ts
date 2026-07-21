@@ -2,10 +2,10 @@ import { ensureCtx } from "../audio/engine";
 import { FORMATS, LOOKS, MKEYS, MOTIONS, TRANSITIONS, VQUAL } from "../core/config";
 import { clearHistory } from "../core/history";
 import { armAutosave, loadSaved, markDirty } from "../core/project";
-import type { SavedProject } from "../core/project";
+import type { SavedClip, SavedProject } from "../core/project";
 import { S, app } from "../state";
-import type { Clip, Item, Settings } from "../types";
-import { loadFile } from "./cards";
+import type { Clip, Item, Settings, TitleCard } from "../types";
+import { loadFile, syncBars } from "./cards";
 import { initControls } from "./controls";
 import { initStudio, syncItemSelection, updateSelUI } from "./studio";
 import { renderTimeline } from "./timeline";
@@ -66,6 +66,26 @@ function clampNum(v: unknown, min: number, max: number, fallback: number): numbe
   return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
 }
 
+/** Validate + attach the per-clip render overrides (UNTRUSTED-shaped — known keys only). */
+function applyClipOverrides(clip: Clip, c: SavedClip): void {
+  if (typeof c.motion === "string" && MOTIONS.some(function (m) { return m.key === c.motion; })) clip.motion = c.motion;
+  if (typeof c.look === "string" && LOOKS.some(function (l) { return l.key === c.look; })) clip.look = c.look;
+  if (typeof c.trans === "string" && TRANSITIONS.some(function (tr) { return tr.key === c.trans; })) clip.trans = c.trans;
+}
+
+/** Coerce an UNTRUSTED-shaped saved card into a valid TitleCard. */
+function sanitizeCard(c: unknown): TitleCard {
+  const o = (c || {}) as Partial<TitleCard>;
+  const hex = function (v: unknown, fallback: string): string {
+    return (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : fallback;
+  };
+  return {
+    text: (typeof o.text === "string") ? o.text.slice(0, 200) : "",
+    bg: hex(o.bg, "#101010"),
+    fg: hex(o.fg, "#ffffff"),
+  };
+}
+
 function showBar(saved: SavedProject): void {
   const bar = document.createElement("div");
   bar.className = "restoreBar";
@@ -115,14 +135,18 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
 
   // clips: rebuild the timeline directly (duplicates allowed), clamped on ingestion
   saved.seq.forEach(function (c) {
+    const dur = Math.max(1, Math.min(60, Math.round(Number(c.dur)) || 4));
+    if (c.card) { // title card — no source photo
+      const clip: Clip = { uid: ++app.clipIdc, id: 0, dur: dur, card: sanitizeCard(c.card) };
+      applyClipOverrides(clip, c);
+      app.seq.push(clip);
+      return;
+    }
     const it = loaded[c.idx];
     if (!it) return;
-    const clip: Clip = { uid: ++app.clipIdc, id: it.id, dur: Math.max(1, Math.min(60, Math.round(Number(c.dur)) || 4)) };
+    const clip: Clip = { uid: ++app.clipIdc, id: it.id, dur: dur };
     if (typeof c.text === "string" && c.text.trim()) clip.text = c.text.slice(0, 80);
-    // per-clip overrides are UNTRUSTED-shaped — only accept known option keys
-    if (typeof c.motion === "string" && MOTIONS.some(function (m) { return m.key === c.motion; })) clip.motion = c.motion;
-    if (typeof c.look === "string" && LOOKS.some(function (l) { return l.key === c.look; })) clip.look = c.look;
-    if (typeof c.trans === "string" && TRANSITIONS.some(function (tr) { return tr.key === c.trans; })) clip.trans = c.trans;
+    applyClipOverrides(clip, c);
     app.seq.push(clip);
   });
   loaded.forEach(function (it) { if (it) syncItemSelection(it); });
@@ -148,6 +172,7 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
   }
 
   refreshAudioUI();
+  syncBars(); // a card-only project has no photos → show the panel from app.seq
   renderTimeline();
   updateSelUI();
   clearHistory(); // the restored state is the new baseline — nothing to undo into

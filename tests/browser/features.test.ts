@@ -134,6 +134,24 @@ describe("per-clip overrides", () => {
   });
 });
 
+describe("title cards", () => {
+  it("renders its text on its background colour (no source photo)", () => {
+    app.items = [];
+    app.seq = [{ id: 0, dur: 3, card: { text: "Hello", bg: "#000000", fg: "#ffffff" } }];
+    const out = document.createElement("canvas");
+    out.width = 240; out.height = 135;
+    drawAtTime(out.getContext("2d")!, 240, 135, 1);
+    const px = pixelsOf(out);
+    let white = 0, black = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i] > 200 && px[i + 1] > 200 && px[i + 2] > 200) white++;
+      else if (px[i] < 40 && px[i + 1] < 40 && px[i + 2] < 40) black++;
+    }
+    expect(black, "background fill").toBeGreaterThan(0);
+    expect(white, "text glyphs").toBeGreaterThan(0);
+  });
+});
+
 describe("clip reorder math", () => {
   it("insertIndexAt picks the drop slot by clip midpoints", () => {
     // durations 4,6,2 → boundaries 0,4,10,12 ; midpoints 2,7,11

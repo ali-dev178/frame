@@ -52,7 +52,7 @@ function drawSegWave(cv2: HTMLCanvasElement, bw: number, bh: number, tr: AudioTr
 }
 
 export function renderTimeline(): void {
-  app.seq = app.seq.filter(function(c){ return byId(c.id); });
+  app.seq = app.seq.filter(function(c){ return c.card || byId(c.id); }); // title cards have no item
   if(app.selClipId !== null && !app.seq.some(function(c){ return c.uid === app.selClipId; })) app.selClipId = null;
   if(app.selTrackId !== null && !trackById(app.selTrackId)) app.selTrackId = null;
   const total = totalDur();
@@ -97,11 +97,17 @@ export function renderTimeline(): void {
   app.seq.forEach(function(c, i){
     const it = byId(c.id);
     const d = document.createElement("div");
-    d.className = "tlclip" + (c.uid === app.selClipId ? " on" : "");
+    d.className = "tlclip" + (c.uid === app.selClipId ? " on" : "") + (c.card ? " titlecard" : "");
     d.style.left = (acc*tlPps) + "px";
     d.style.width = Math.max(6, c.dur*tlPps) + "px";
-    if(it && it.thumbUrl) d.style.backgroundImage = "url(" + it.thumbUrl + ")";
+    if(c.card){ d.style.backgroundColor = c.card.bg; }
+    else if(it && it.thumbUrl){ d.style.backgroundImage = "url(" + it.thumbUrl + ")"; }
     d.innerHTML = '<span class="tlo">' + (i+1) + '</span><span class="tld">' + c.dur + 's</span><div class="tlh"></div>';
+    if(c.card){
+      const tt = document.createElement("span");
+      tt.className = "tlt"; tt.style.color = c.card.fg; tt.textContent = c.card.text || "Title";
+      d.insertBefore(tt, d.querySelector(".tlh"));
+    }
     const clipStart = acc;
     d.addEventListener("pointerdown", function(e){
       if(app.vbusy) return;
@@ -372,27 +378,57 @@ function selClipIdx(): number {
 function showClipTool(): void {
   const i = selClipIdx();
   if(i < 0){ $("cliptool").style.display = "none"; return; }
-  const it = byId(app.seq[i].id);
+  const clip = app.seq[i];
+  const it = byId(clip.id);
+  const isCard = !!clip.card;
   $("audiotool").style.display = "none";
   $("cliptool").style.display = "";
-  $("cliptoolLbl").textContent = "Clip " + (i+1) + (it ? " · " + it.name : "") + " · " + app.seq[i].dur + "s";
+  $("cliptoolLbl").textContent = isCard
+    ? "Title card · " + clip.dur + "s"
+    : "Clip " + (i+1) + (it ? " · " + it.name : "") + " · " + clip.dur + "s";
   $<HTMLButtonElement>("ctL").disabled = (i === 0);
   $<HTMLButtonElement>("ctR").disabled = (i === app.seq.length - 1);
-  // per-clip override selects — "" = Auto (use the global Studio setting)
-  $<HTMLSelectElement>("ctMotion").value = app.seq[i].motion || "";
-  $<HTMLSelectElement>("ctLook").value = app.seq[i].look || "";
+  // motion & look are photo-only; a title card gets text + colors instead
+  $<HTMLSelectElement>("ctMotion").style.display = isCard ? "none" : "";
+  $<HTMLSelectElement>("ctLook").style.display = isCard ? "none" : "";
+  $<HTMLSelectElement>("ctMotion").value = clip.motion || "";
+  $<HTMLSelectElement>("ctLook").value = clip.look || "";
   const trSel = $<HTMLSelectElement>("ctTrans");
-  trSel.value = app.seq[i].trans || "";
+  trSel.value = clip.trans || "";
   trSel.disabled = (i === app.seq.length - 1); // last clip has nothing to transition into
   const txt = $<HTMLInputElement>("ctText");
-  // resync when the SELECTED CLIP changes even if the field has focus —
-  // otherwise a clip switch leaves the old clip's caption editable into the new one
-  if(document.activeElement !== txt || capSyncId !== app.selClipId){
-    txt.value = app.seq[i].text || "";
+  const titleIn = $<HTMLInputElement>("ctTitle");
+  const bg = $<HTMLInputElement>("ctBg"), fg = $<HTMLInputElement>("ctFg");
+  txt.style.display = isCard ? "none" : "";
+  titleIn.style.display = isCard ? "" : "none";
+  bg.style.display = isCard ? "" : "none";
+  fg.style.display = isCard ? "" : "none";
+  // resync the active text field when the SELECTED CLIP changes, even while it has
+  // focus, so a clip switch doesn't leave the old value editable into the new clip
+  if(isCard){
+    if(document.activeElement !== titleIn || capSyncId !== app.selClipId){
+      titleIn.value = clip.card!.text;
+      capSyncId = app.selClipId;
+    }
+    bg.value = clip.card!.bg;
+    fg.value = clip.card!.fg;
+  } else if(document.activeElement !== txt || capSyncId !== app.selClipId){
+    txt.value = clip.text || "";
     capSyncId = app.selClipId;
   }
 }
 let capSyncId: number | null = null;
+
+/** Add a blank title card at the end of the timeline and select it. */
+function addTitleCard(): void {
+  if(app.vbusy) return;
+  op(function(){
+    const c: Clip = { uid: ++app.clipIdc, id: 0, dur: 3, card: { text: "Title", bg: "#101010", fg: "#ffffff" } };
+    app.seq.push(c);
+    app.selClipId = c.uid !== undefined ? c.uid : null; app.selTrackId = null;
+  });
+  renderTimeline(); updateSelUI(); invalidateResult(); markDirty(); showClipTool();
+}
 
 /** Populate a per-clip override <select>: an "Auto" row (value "") + one per option. */
 function fillClipSel(sel: HTMLSelectElement, defs: OptionDef[], autoLabel: string): void {
@@ -472,6 +508,7 @@ export function initTimeline(): void {
       if(c.motion) copy.motion = c.motion;
       if(c.look) copy.look = c.look;
       if(c.trans) copy.trans = c.trans;
+      if(c.card) copy.card = { text: c.card.text, bg: c.card.bg, fg: c.card.fg };
       app.seq.splice(i+1, 0, copy);
       app.selClipId = copy.uid!;
     });
@@ -495,7 +532,7 @@ export function initTimeline(): void {
   ctText.onfocus = function(){ beginOp(); };   // one undo step per editing session,
   ctText.onblur = function(){ commitOp(); };   // not per keystroke
   ctText.oninput = function(){
-    const i = selClipIdx(); if(app.vbusy || i < 0) return;
+    const i = selClipIdx(); if(app.vbusy || i < 0 || app.seq[i].card) return; // captions are photo-only
     const v = ctText.value;
     app.seq[i].text = v.trim() ? v : undefined;
     // quiet invalidation: typing must not pause a playing preview
@@ -559,6 +596,29 @@ export function initTimeline(): void {
   $<HTMLSelectElement>("ctMotion").onchange = function(){ setClipOverride("motion", $<HTMLSelectElement>("ctMotion").value); };
   $<HTMLSelectElement>("ctLook").onchange = function(){ setClipOverride("look", $<HTMLSelectElement>("ctLook").value); };
   $<HTMLSelectElement>("ctTrans").onchange = function(){ setClipOverride("trans", $<HTMLSelectElement>("ctTrans").value); };
+
+  // title cards: add button + text/colour editing (mirrors the caption pattern)
+  $("addTitle").onclick = addTitleCard;
+  const ctTitle = $<HTMLInputElement>("ctTitle");
+  ctTitle.onfocus = function(){ beginOp(); };
+  ctTitle.onblur = function(){ commitOp(); renderTimeline(); }; // refresh the timeline label on finish
+  ctTitle.oninput = function(){
+    const i = selClipIdx(); if(app.vbusy || i < 0 || !app.seq[i].card) return;
+    app.seq[i].card!.text = ctTitle.value;
+    drawPreviewFrame(); invalidateResultQuiet(); markDirty(); // no full re-render: don't steal focus
+  };
+  const wireCardColor = function(id: string, key: "bg" | "fg"){
+    const inp = $<HTMLInputElement>(id);
+    inp.onfocus = function(){ beginOp(); };
+    inp.onchange = function(){ commitOp(); renderTimeline(); };
+    inp.oninput = function(){
+      const i = selClipIdx(); if(app.vbusy || i < 0 || !app.seq[i].card) return;
+      app.seq[i].card![key] = inp.value;
+      drawPreviewFrame(); invalidateResultQuiet(); markDirty();
+    };
+  };
+  wireCardColor("ctBg", "bg");
+  wireCardColor("ctFg", "fg");
 
   // timeline zoom — buttons + Ctrl+wheel over the timeline
   $("tlZoomIn").onclick = function(){ if(!app.vbusy) setZoom(tlZoom * 1.5); };

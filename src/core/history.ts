@@ -23,9 +23,15 @@ let past: Snapshot[] = [];
 let future: Snapshot[] = [];
 let pending: Snapshot | null = null;
 
+/** Deep-copy a clip — the card object must be cloned so undo restores its edits. */
+function copyClip(c: Clip): Clip {
+  return { id: c.id, uid: c.uid, dur: c.dur, text: c.text, motion: c.motion, look: c.look, trans: c.trans,
+           card: c.card ? { text: c.card.text, bg: c.card.bg, fg: c.card.fg } : undefined };
+}
+
 function snap(): Snapshot {
   return {
-    seq: app.seq.map(function (c) { return { id: c.id, uid: c.uid, dur: c.dur, text: c.text, motion: c.motion, look: c.look, trans: c.trans }; }),
+    seq: app.seq.map(copyClip),
     tracks: app.tracks.map(function (t) { return Object.assign({}, t); }),
     selClipId: app.selClipId,
     selTrackId: app.selTrackId,
@@ -39,6 +45,9 @@ function sameArrangement(a: Snapshot, b: Snapshot): boolean {
     const x = a.seq[i], y = b.seq[i];
     if (x.id !== y.id || x.uid !== y.uid || x.dur !== y.dur || x.text !== y.text ||
         x.motion !== y.motion || x.look !== y.look || x.trans !== y.trans) return false;
+    const xc = x.card, yc = y.card;
+    if (!!xc !== !!yc) return false;
+    if (xc && yc && (xc.text !== yc.text || xc.bg !== yc.bg || xc.fg !== yc.fg)) return false;
   }
   for (let i = 0; i < a.tracks.length; i++) {
     const x = a.tracks[i], y = b.tracks[i];
@@ -77,7 +86,7 @@ export function op(fn: () => void): void {
 }
 
 function apply(s: Snapshot): void {
-  app.seq = s.seq.map(function (c) { return { id: c.id, uid: c.uid, dur: c.dur, text: c.text, motion: c.motion, look: c.look, trans: c.trans }; });
+  app.seq = s.seq.map(copyClip);
   app.tracks = s.tracks.map(function (t) { return Object.assign({}, t); });
   app.selClipId = s.selClipId;
   app.selTrackId = s.selTrackId;

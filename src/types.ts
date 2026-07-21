@@ -117,6 +117,18 @@ export interface Clip {
   look?: string;
   /** Per-clip transition OUT of this clip into the next — falls back to global S.trans. */
   trans?: string;
+  /** Title card: when set, this clip has NO source photo — it renders styled text
+   *  on a solid background instead (id is a 0 sentinel). */
+  card?: TitleCard;
+}
+
+/** A text slide: centered text on a solid background. */
+export interface TitleCard {
+  text: string;
+  /** Background color, #rrggbb. */
+  bg: string;
+  /** Text color, #rrggbb. */
+  fg: string;
 }
 
 /** One audio block on the timeline. */

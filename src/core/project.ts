@@ -1,5 +1,5 @@
 import { S, app } from "../state";
-import type { Settings } from "../types";
+import type { Settings, TitleCard } from "../types";
 import { idbDel, idbGet, idbSet } from "./idb";
 
 /**
@@ -10,7 +10,7 @@ import { idbDel, idbGet, idbSet } from "./idb";
  */
 
 export interface SavedItem { name: string; blob: Blob }
-export interface SavedClip { idx: number; dur: number; text?: string; motion?: string; look?: string; trans?: string }
+export interface SavedClip { idx: number; dur: number; text?: string; motion?: string; look?: string; trans?: string; card?: TitleCard }
 export interface SavedTrack { name: string; blob: Blob; start: number; end: number; at: number; lane: number; gain?: number }
 export interface SavedProject {
   v: 1;
@@ -64,10 +64,10 @@ export function serialize(): SavedProject {
     items: app.items.map(function (it) { return { name: it.name, blob: it.file as Blob }; }),
     seq: app.seq
       .map(function (c) {
-        return { idx: app.items.findIndex(function (i) { return i.id === c.id; }), dur: c.dur, text: c.text,
-                 motion: c.motion, look: c.look, trans: c.trans };
+        return { idx: c.card ? -1 : app.items.findIndex(function (i) { return i.id === c.id; }), dur: c.dur, text: c.text,
+                 motion: c.motion, look: c.look, trans: c.trans, card: c.card };
       })
-      .filter(function (c) { return c.idx >= 0; }),
+      .filter(function (c) { return !!c.card || c.idx >= 0; }), // title cards have no item index
     tracks: app.tracks
       .filter(function (t) { return !!t.file; })
       .map(function (t) { return { name: t.name, blob: t.file!, start: t.start, end: t.end, at: t.at, lane: t.lane, gain: t.gain }; }),

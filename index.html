@@ -108,10 +108,13 @@
     <p class="ptitle">Step 2 · Arrange &amp; export a video <span class="fmt" id="fmtLine"></span></p>
 
     <div class="stitle">Clips <span class="sub2" id="seqInfo"></span>
-      <span class="tlzoom" id="tlzoom" style="display:none">
-        <button class="cbtn" id="tlZoomOut" title="Zoom out" type="button">−</button>
-        <button class="cbtn" id="tlZoomFit" title="Fit to width" type="button">⤢</button>
-        <button class="cbtn" id="tlZoomIn" title="Zoom in" type="button">+</button>
+      <span class="tlbtns">
+        <button class="cbtn ctext" id="addTitle" title="Add a title card" type="button">+ Title</button>
+        <span class="tlzoom" id="tlzoom" style="display:none">
+          <button class="cbtn" id="tlZoomOut" title="Zoom out" type="button">−</button>
+          <button class="cbtn" id="tlZoomFit" title="Fit to width" type="button">⤢</button>
+          <button class="cbtn" id="tlZoomIn" title="Zoom in" type="button">+</button>
+        </span>
       </span>
     </div>
     <div class="player" id="player">
@@ -144,6 +147,9 @@
       <select class="csel" id="ctLook" title="Color look for this clip"></select>
       <select class="csel" id="ctTrans" title="Transition after this clip"></select>
       <input type="text" class="txt capInput" id="ctText" placeholder="Caption for this clip…" maxlength="80">
+      <input type="text" class="txt capInput" id="ctTitle" placeholder="Title text…" maxlength="120" style="display:none">
+      <input type="color" class="ccolor" id="ctBg" title="Background colour" value="#101010" style="display:none">
+      <input type="color" class="ccolor" id="ctFg" title="Text colour" value="#ffffff" style="display:none">
     </div>
     <div class="cliptool" id="audiotool" style="display:none">
       <span class="sub" id="audiotoolLbl"></span>

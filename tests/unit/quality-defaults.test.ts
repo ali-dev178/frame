@@ -19,7 +19,9 @@ describe("quality defaults are pinned", () => {
     expect(S.motion).toBe("static"); // Still = 1:1 frame copies
     expect(S.trans).toBe("none");    // Cut = no blended frames
     expect(S.look).toBe("none");     // untouched color
-    expect(S.vfit).toBe("framed");   // the framed canvas is the 1:1 exact-copy source
+    // the video shows the whole ORIGINAL photo by default (fit); the 1:1
+    // exact-copy video path is the "framed" opt-in, still fully available.
+    expect(S.vfit).toBe("fit");
   });
 
   it("every pixel-affecting option has an untouched choice", () => {

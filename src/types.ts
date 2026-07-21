@@ -100,6 +100,8 @@ export interface Item {
   /** Where the original sits inside the framed canvas. */
   geo?: { dx: number; dy: number } | null;
   thumbUrl?: string | null;
+  /** Object URL of the ORIGINAL file — the video-tab card preview (no fills). */
+  vurl?: string;
   selected?: boolean;
 }
 

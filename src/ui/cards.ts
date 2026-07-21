@@ -33,7 +33,7 @@ export function initCards(): void {
     if(e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
   });
 
-  $("clear").onclick = function(){ if(app.vbusy) return; app.items = []; app.seq = []; grid.innerHTML=""; clearHistory(); invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
+  $("clear").onclick = function(){ if(app.vbusy) return; app.items.forEach(function(it){ if(it.vurl){ URL.revokeObjectURL(it.vurl); it.vurl = undefined; } }); app.items = []; app.seq = []; grid.innerHTML=""; clearHistory(); invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
   $("dlAll").onclick = downloadAll;
   $("sideAdd").onclick = function(){ file.click(); }; // sidebar "Add photos"
 }
@@ -68,13 +68,15 @@ function createCard(it: Item): void {
   const card = document.createElement("div");
   card.className = "card";
   card.innerHTML =
-    '<div class="stage"><div class="frame"><div class="bounds"></div></div>' +
+    '<div class="stage"><div class="frame"><img class="vpreview" alt=""><div class="bounds"></div></div>' +
       '<label class="pick" title="Add to video"><input type="checkbox"></label></div>' +
     '<div class="meta"><div class="name"></div><div class="dims"></div></div>' +
     '<div class="foot"><button class="btn primary dl">Download PNG</button>' +
     '<button class="btn vfy" title="Check the picture region is bit-identical to your upload">Verify</button>' +
     '<button class="btn rm" title="Remove">Remove</button></div>';
   card.querySelector(".name")!.textContent = it.name;
+  it.vurl = URL.createObjectURL(it.file); // original shown in the video tab (no fills)
+  (card.querySelector(".vpreview") as HTMLImageElement).src = it.vurl;
   (card.querySelector(".vfy") as HTMLButtonElement).onclick = function(){ verifyItem(it); };
   const pick = card.querySelector(".pick input") as HTMLInputElement;
   pick.addEventListener("change", function(){
@@ -97,6 +99,7 @@ function createCard(it: Item): void {
     if(app.vbusy) return;
     setSelected(it, false);
     app.items = app.items.filter(function(x){ return x.id !== it.id; });
+    if(it.vurl){ URL.revokeObjectURL(it.vurl); it.vurl = undefined; }
     card.remove(); syncBars();
   };
   grid.appendChild(card);

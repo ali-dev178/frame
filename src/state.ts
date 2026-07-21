@@ -16,7 +16,7 @@ export const S: Settings = {
   customW: 1080,
   customH: 1350,
   motion: "static",
-  vfit: "framed",
+  vfit: "fit", // video shows the ORIGINAL photo by default — "framed" (with fills) is opt-in
   vq: "ultra",
   vfade: true,
   trans: "none",

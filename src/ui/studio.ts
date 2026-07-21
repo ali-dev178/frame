@@ -7,6 +7,7 @@ import { exportFast } from "../export/fast";
 import { exportRecord } from "../export/record";
 import { REC, hasAEnc, hasVEnc } from "../export/capabilities";
 import { platform } from "../platform";
+import { syncGridFit } from "./mode";
 import { drawAtTime, outDims } from "../render/sequence";
 import { S, app, byId, curTarget, hasAudio, totalDur } from "../state";
 import type { Item } from "../types";
@@ -249,6 +250,7 @@ export function initStudio(): void {
     S.vfit = k;
     refreshSeg($("segPhotoFit"), PHOTOFITS.map(function(x){return x.key;}), k);
     $("photoFitHint").textContent = hintOf(PHOTOFITS, k);
+    syncGridFit(); // keep the video-tab card previews in sync with the render
     drawPreviewFrame(); invalidateResult(); markDirty();
   });
   $("photoFitHint").textContent = hintOf(PHOTOFITS, S.vfit);

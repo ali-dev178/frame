@@ -74,6 +74,7 @@ function resetSettings(): void {
   S.solidMode = "auto";
   S.solidColor = "#101010";
   S.motion = "static";
+  S.vfit = "framed"; // these tests assert the exact framed 1:1 video-copy path
 }
 
 beforeEach(resetSettings);

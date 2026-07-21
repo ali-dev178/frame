@@ -292,3 +292,7 @@ footer{margin-top:32px;padding-top:24px}
 #presetChips:empty::after{content:"No presets yet — save your favorite settings.";color:var(--muted-2);font-size:12px}
 .capInput{flex:1;min-width:200px}
 .atvol{width:110px}
+.afade{width:54px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:7px;color:var(--ink);font:inherit;font-size:12px;padding:4px 6px}
+.aduck{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer}
+.aduck input{margin:0}
+#recVoice.rec{background:#c0392b;color:#fff;border-color:transparent}

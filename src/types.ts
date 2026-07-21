@@ -150,6 +150,12 @@ export interface AudioTrack {
   lane: number;
   /** Playback volume 0..1 (default 1) — a music bed under narration wants ~0.3. */
   gain?: number;
+  /** Fade-in duration, seconds (0/undefined = none). */
+  fadeIn?: number;
+  /** Fade-out duration, seconds. */
+  fadeOut?: number;
+  /** When true this is a music bed that auto-ducks under other (voice) tracks. */
+  duck?: boolean;
 }
 
 export type Orient = "sides" | "vert" | "none";

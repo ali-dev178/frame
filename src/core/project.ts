@@ -11,7 +11,7 @@ import { idbDel, idbGet, idbSet } from "./idb";
 
 export interface SavedItem { name: string; blob: Blob }
 export interface SavedClip { idx: number; dur: number; text?: string; motion?: string; look?: string; trans?: string; card?: TitleCard }
-export interface SavedTrack { name: string; blob: Blob; start: number; end: number; at: number; lane: number; gain?: number }
+export interface SavedTrack { name: string; blob: Blob; start: number; end: number; at: number; lane: number; gain?: number; fadeIn?: number; fadeOut?: number; duck?: boolean }
 export interface SavedProject {
   v: 1;
   savedAt: number;
@@ -70,7 +70,7 @@ export function serialize(): SavedProject {
       .filter(function (c) { return !!c.card || c.idx >= 0; }), // title cards have no item index
     tracks: app.tracks
       .filter(function (t) { return !!t.file; })
-      .map(function (t) { return { name: t.name, blob: t.file!, start: t.start, end: t.end, at: t.at, lane: t.lane, gain: t.gain }; }),
+      .map(function (t) { return { name: t.name, blob: t.file!, start: t.start, end: t.end, at: t.at, lane: t.lane, gain: t.gain, fadeIn: t.fadeIn, fadeOut: t.fadeOut, duck: t.duck }; }),
   };
 }
 

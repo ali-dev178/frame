@@ -158,6 +158,10 @@
       <button class="cbtn" id="atX" title="Remove (Del)">✕</button>
       <span class="sub">vol</span>
       <input type="range" id="atVol" class="atvol" min="0" max="100" step="1" title="Volume of this audio piece">
+      <span class="sub">fade</span>
+      <input type="number" id="atFadeIn" class="afade" min="0" max="30" step="0.1" title="Fade-in seconds">
+      <input type="number" id="atFadeOut" class="afade" min="0" max="30" step="0.1" title="Fade-out seconds">
+      <label class="aduck" title="Auto-lower this track while other (voice) tracks play"><input type="checkbox" id="atDuck"> duck</label>
     </div>
     <div class="hintline" id="seqHint">Tick photos above to add them here — then set the order and how long each one shows.</div>
 
@@ -170,6 +174,7 @@
       </div>
       <div class="spacer"></div>
       <button type="button" class="chip" id="fitMusic">Match clips to music</button>
+      <button class="btn" id="recVoice" type="button" title="Record a voiceover from your microphone">● Voiceover</button>
       <button class="btn" id="musicPick" type="button">Add music</button>
       <input type="file" id="audioFile" accept="audio/*" multiple hidden>
     </div>

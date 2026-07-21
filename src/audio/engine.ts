@@ -8,9 +8,75 @@ export function ensureCtx(): AudioContext {
   return audioCtx;
 }
 
+const DUCK_LEVEL = 0.28; // how far a music bed drops under a voice track
+const DUCK_RAMP = 0.12;  // ramp seconds in/out of a duck
+
+/** Merged [start,end] spans of the NON-duck (voice) tracks — what a bed ducks under. */
+function duckSpans(total: number): number[][] {
+  if(!app.tracks.some(function(t){ return t.duck && trackLen(t) > 0.01; })) return [];
+  const raw: number[][] = [];
+  app.tracks.forEach(function(t){
+    if(t.duck) return;
+    const len = trackLen(t); if(len <= 0.01) return;
+    const s1 = Math.min(t.at + len, total);
+    if(s1 > t.at) raw.push([t.at, s1]);
+  });
+  raw.sort(function(a,b){ return a[0]-b[0]; });
+  const out: number[][] = [];
+  raw.forEach(function(sp){
+    const last = out[out.length-1];
+    if(last && sp[0] <= last[1] + 2*DUCK_RAMP) last[1] = Math.max(last[1], sp[1]); // merge near-adjacent
+    else out.push([sp[0], sp[1]]);
+  });
+  return out;
+}
+
+/** Piecewise-linear volume+fade envelope on a track's gain param. */
+function schedFade(param: AudioParam, baseTime: number, fromT: number, aStart: number, aEnd: number, vol: number, fi: number, fo: number): void {
+  const clk = function(ts: number){ return baseTime + Math.max(0, ts - fromT); };
+  const evalG = function(x: number){
+    let g = vol;
+    if(fi > 0 && x < aStart + fi) g = Math.min(g, vol * (x - aStart) / fi);
+    if(fo > 0 && x > aEnd - fo) g = Math.min(g, vol * (aEnd - x) / fo);
+    return Math.max(0.0001, g);
+  };
+  const x0 = Math.max(fromT, aStart);
+  param.setValueAtTime(evalG(x0), clk(x0));
+  [aStart + fi, aEnd - fo, aEnd].filter(function(ts){ return ts > x0 + 0.0001; })
+    .sort(function(a,b){ return a-b; })
+    .forEach(function(ts){ param.linearRampToValueAtTime(evalG(ts), clk(ts)); });
+}
+
+/** Ducking envelope: 1.0 normally, DUCK_LEVEL across each voice span, with ramps. */
+function schedDuck(param: AudioParam, baseTime: number, fromT: number, aStart: number, aEnd: number, spans: number[][]): void {
+  const clk = function(ts: number){ return baseTime + Math.max(0, ts - fromT); };
+  const x0 = Math.max(fromT, aStart);
+  // starting value must reflect a scrub that begins already inside a voice span
+  const startDucked = spans.some(function(sp){ return x0 >= sp[0] && x0 < sp[1]; });
+  const pts: { t: number; v: number }[] = [{ t: x0, v: startDucked ? DUCK_LEVEL : 1 }];
+  spans.forEach(function(sp){
+    const a = Math.max(sp[0], aStart), b = Math.min(sp[1], aEnd);
+    if(b <= a) return;
+    pts.push({ t: Math.max(x0, a - DUCK_RAMP), v: 1 });
+    pts.push({ t: Math.max(x0, a), v: DUCK_LEVEL });
+    pts.push({ t: Math.min(aEnd, b), v: DUCK_LEVEL });
+    pts.push({ t: Math.min(aEnd, b + DUCK_RAMP), v: 1 });
+  });
+  pts.push({ t: aEnd, v: 1 });
+  pts.sort(function(p,q){ return p.t - q.t; });
+  let first = true, lastT = -1;
+  pts.forEach(function(p){
+    if(p.t < x0 - 0.0001 || p.t <= lastT + 0.0005) return;
+    lastT = p.t;
+    if(first){ param.setValueAtTime(p.v, clk(p.t)); first = false; }
+    else param.linearRampToValueAtTime(p.v, clk(p.t));
+  });
+}
+
 /** Schedules all audio clips (overlaps mix), optionally starting mid-timeline (fromT). */
 export function scheduleSegs(ctx: BaseAudioContext, gainNode: GainNode, baseTime: number, fromT: number, total: number): AudioBufferSourceNode[] {
   const nodes: AudioBufferSourceNode[] = [];
+  const spans = duckSpans(total);
   app.tracks.forEach(function(t){
     const len = trackLen(t);
     if(len <= 0.01) return;
@@ -20,14 +86,22 @@ export function scheduleSegs(ctx: BaseAudioContext, gainNode: GainNode, baseTime
     const s = ctx.createBufferSource();
     s.buffer = t.buffer;
     const vol = t.gain === undefined ? 1 : t.gain;
-    if(vol !== 1){
-      // per-track volume — a music bed under narration mixes at its own level
-      const tg = ctx.createGain();
-      tg.gain.value = vol;
-      s.connect(tg); tg.connect(gainNode);
-    } else {
-      s.connect(gainNode);
+    const adur = pEnd - pStart;
+    const fi = Math.min(Math.max(0, t.fadeIn || 0), adur);
+    const fo = Math.min(Math.max(0, t.fadeOut || 0), adur);
+    let head: AudioNode = s;
+    if(vol !== 1 || fi > 0 || fo > 0){
+      // per-track volume + fades — a music bed under narration mixes at its own level
+      const fg = ctx.createGain();
+      schedFade(fg.gain, baseTime, fromT, pStart, pEnd, vol, fi, fo);
+      head.connect(fg); head = fg;
     }
+    if(t.duck && spans.length){
+      const dg = ctx.createGain();
+      schedDuck(dg.gain, baseTime, fromT, pStart, pEnd, spans);
+      head.connect(dg); head = dg;
+    }
+    head.connect(gainNode);
     s.start(baseTime + Math.max(0, pStart - fromT), t.start + skip);
     s.stop(baseTime + (pEnd - fromT));
     nodes.push(s);

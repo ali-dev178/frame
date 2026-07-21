@@ -463,6 +463,9 @@ function updateAudioToolLbl(): void {
   if(t.start > 0.05) lbl += " · from " + fmtTime(t.start);
   if(t.end < t.dur - 0.05) lbl += " · to " + fmtTime(t.end);
   lbl += " · vol " + Math.round(vol * 100) + "%";
+  if(t.fadeIn) lbl += " · in " + t.fadeIn + "s";
+  if(t.fadeOut) lbl += " · out " + t.fadeOut + "s";
+  if(t.duck) lbl += " · duck";
   $("audiotoolLbl").textContent = lbl;
 }
 function showAudioTool(): void {
@@ -472,6 +475,9 @@ function showAudioTool(): void {
   $("audiotool").style.display = "";
   const t = app.tracks[i];
   $<HTMLInputElement>("atVol").value = String(Math.round((t.gain === undefined ? 1 : t.gain) * 100));
+  $<HTMLInputElement>("atFadeIn").value = String(t.fadeIn || 0);
+  $<HTMLInputElement>("atFadeOut").value = String(t.fadeOut || 0);
+  $<HTMLInputElement>("atDuck").checked = !!t.duck;
   updateAudioToolLbl();
 }
 
@@ -548,8 +554,10 @@ export function initTimeline(): void {
     }
     op(function(){
       const right: AudioTrack = { id: ++app.trackIdc, name: t.name, file: t.file, buffer: t.buffer, dur: t.dur,
-                    start: t.start + rel, end: t.end, at: t.at + rel, lane: t.lane, gain: t.gain };
+                    start: t.start + rel, end: t.end, at: t.at + rel, lane: t.lane, gain: t.gain,
+                    fadeOut: t.fadeOut, duck: t.duck };
       t.end = t.start + rel;
+      t.fadeOut = 0; // the left half no longer reaches the original end
       app.tracks.splice(i+1, 0, right);
     });
     refreshAudioUI(); invalidateResult(); showAudioTool();
@@ -560,7 +568,8 @@ export function initTimeline(): void {
       const t = app.tracks[i];
       const len = Math.max(0, t.end - t.start);
       const copy: AudioTrack = { id: ++app.trackIdc, name: t.name, file: t.file, buffer: t.buffer, dur: t.dur,
-                    start: t.start, end: t.end, at: t.at + len, lane: t.lane, gain: t.gain };
+                    start: t.start, end: t.end, at: t.at + len, lane: t.lane, gain: t.gain,
+                    fadeIn: t.fadeIn, fadeOut: t.fadeOut, duck: t.duck };
       app.tracks.splice(i+1, 0, copy);
       app.selTrackId = copy.id;
     });
@@ -588,6 +597,32 @@ export function initTimeline(): void {
     invalidateResultQuiet(); markDirty();
   };
   atVol.onblur = function(){ commitOp(); };
+
+  // per-track fade in/out (seconds) + auto-duck toggle
+  const wireFade = function(id: string, key: "fadeIn" | "fadeOut"){
+    const inp = $<HTMLInputElement>(id);
+    // one undo step per editing session (focus→blur), like the volume slider —
+    // committing per onchange would drop all but the first spinner/arrow step
+    inp.onfocus = function(){ beginOp(); };
+    inp.onblur = function(){ commitOp(); };
+    inp.oninput = function(){
+      const i = selTrackIdx(); if(app.vbusy || i < 0) return;
+      app.tracks[i][key] = Math.max(0, Math.min(30, (+inp.value) || 0));
+      updateAudioToolLbl();
+      if(pv.playing) pvSeek(pv.t); // reschedule live audio with the new envelope
+      invalidateResultQuiet(); markDirty();
+    };
+  };
+  wireFade("atFadeIn", "fadeIn");
+  wireFade("atFadeOut", "fadeOut");
+  const atDuck = $<HTMLInputElement>("atDuck");
+  atDuck.onchange = function(){
+    const i = selTrackIdx(); if(app.vbusy || i < 0) return;
+    op(function(){ app.tracks[i].duck = atDuck.checked; });
+    updateAudioToolLbl();
+    if(pv.playing) pvSeek(pv.t);
+    invalidateResultQuiet(); markDirty();
+  };
 
   // per-clip overrides — Motion / Look / Transition-out, each defaulting to Auto (global)
   fillClipSel($<HTMLSelectElement>("ctMotion"), MOTIONS, "Motion: auto");

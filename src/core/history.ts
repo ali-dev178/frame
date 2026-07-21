@@ -52,7 +52,8 @@ function sameArrangement(a: Snapshot, b: Snapshot): boolean {
   for (let i = 0; i < a.tracks.length; i++) {
     const x = a.tracks[i], y = b.tracks[i];
     if (x.id !== y.id || x.start !== y.start || x.end !== y.end || x.at !== y.at ||
-        x.lane !== y.lane || (x.gain ?? 1) !== (y.gain ?? 1)) return false;
+        x.lane !== y.lane || (x.gain ?? 1) !== (y.gain ?? 1) ||
+        (x.fadeIn ?? 0) !== (y.fadeIn ?? 0) || (x.fadeOut ?? 0) !== (y.fadeOut ?? 0) || !!x.duck !== !!y.duck) return false;
   }
   return true;
 }

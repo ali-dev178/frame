@@ -35,6 +35,59 @@ export function initSoundtrack(): void {
     });
     renderTimeline(); updateSelUI(); invalidateResult();
   };
+
+  // voiceover: record from the microphone straight into a new audio track
+  let mediaRec: MediaRecorder | null = null;
+  let micStream: MediaStream | null = null;
+  const recBtn = $<HTMLButtonElement>("recVoice");
+  recBtn.onclick = function(){
+    if(app.vbusy) return;
+    if(mediaRec && mediaRec.state !== "inactive"){ mediaRec.stop(); return; } // toggle off
+    const md = navigator.mediaDevices;
+    if(!md || !md.getUserMedia || typeof MediaRecorder === "undefined"){
+      $("musicDur").textContent = "Microphone recording isn't available in this browser.";
+      return;
+    }
+    md.getUserMedia({ audio: true }).then(function(stream){
+      micStream = stream;
+      const chunks: Blob[] = [];
+      const rec = new MediaRecorder(stream);
+      mediaRec = rec;
+      rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) chunks.push(ev.data); };
+      rec.onstop = function(){
+        if(micStream){ micStream.getTracks().forEach(function(tr){ tr.stop(); }); micStream = null; }
+        recBtn.classList.remove("rec"); recBtn.textContent = "● Voiceover"; mediaRec = null;
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        if(blob.size) addRecordedVoice(new File([blob], "Voiceover", { type: blob.type }));
+      };
+      rec.start();
+      recBtn.classList.add("rec"); recBtn.textContent = "■ Stop";
+    }).catch(function(){
+      // reject OR a throw from new MediaRecorder()/start() after the stream was
+      // acquired — never leave the mic live or the recorder half-open
+      if(micStream){ micStream.getTracks().forEach(function(tr){ tr.stop(); }); micStream = null; }
+      mediaRec = null;
+      recBtn.classList.remove("rec"); recBtn.textContent = "● Voiceover";
+      $("musicDur").textContent = "Couldn't start recording — check microphone permissions.";
+    });
+  };
+}
+
+/** Decode a recorded voiceover blob and drop it as a track at the playhead. */
+function addRecordedVoice(file: File): void {
+  const fr = new FileReader();
+  fr.onload = function(){
+    ensureCtx().decodeAudioData((fr.result as ArrayBuffer).slice(0), function(buf){
+      const atDefault = Math.max(0, Math.min(round10(pv.t), Math.max(0, totalDur() - 0.5)));
+      op(function(){
+        const t: AudioTrack = { id: ++app.trackIdc, name: "Voiceover", file: file, buffer: buf, dur: buf.duration,
+                  start: 0, end: buf.duration, at: atDefault, lane: nextLane() };
+        app.tracks.push(t); app.selTrackId = t.id;
+      });
+      refreshAudioUI(); invalidateResult();
+    }, function(){ $("musicDur").textContent = "Couldn't decode the recording — try again."; });
+  };
+  fr.readAsArrayBuffer(file);
 }
 
 function addAudioFiles(list: FileList): void {

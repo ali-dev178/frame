@@ -166,6 +166,9 @@ async function restoreMedia(saved: SavedProject): Promise<number> {
           at: clampNum(st.at, 0, 36000, 0),
           lane: Math.max(0, Math.round(Number(st.lane)) || 0),
           gain: clampNum(st.gain === undefined ? 1 : st.gain, 0, 1, 1),
+          fadeIn: clampNum(st.fadeIn, 0, 30, 0),
+          fadeOut: clampNum(st.fadeOut, 0, 30, 0),
+          duck: !!st.duck,
         });
       } catch (e) { failures++; }
     }

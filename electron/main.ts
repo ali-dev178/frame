@@ -147,9 +147,9 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
-    // the app needs no permissions except fullscreen (the video preview's button)
+    // fullscreen (the preview button) + microphone (voiceover recording); nothing else
     session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
-      cb(permission === "fullscreen");
+      cb(permission === "fullscreen" || permission === "media");
     });
 
     if (process.platform === "darwin") {

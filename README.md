@@ -29,6 +29,14 @@ Two workspaces, one app:
 |---|---|
 | Turn each photo into a social-ready image with filled margins, saved as a lossless PNG. | Arrange photos into a slideshow with music, captions, motion, and transitions. |
 
+### See it in action
+
+A wide photo into a 9:16 Story, and a tall photo into a 1:1 Post — the **original picture stays untouched**; only the new margins are filled (here with the *Blurred photo* style):
+
+![Before and after — wide photo to Story 9:16](docs/screenshots/00-before-after-story.png)
+
+![Before and after — tall photo to Post 1:1](docs/screenshots/00-before-after-square.png)
+
 ---
 
 ## The one promise: your pixels are never touched

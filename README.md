@@ -11,7 +11,7 @@ Everything runs in your browser. No photo or audio ever leaves your machine.
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8)
 ![Tests](https://img.shields.io/badge/tests-94%20passing-3fb950)
 
-![Frame — overview](docs/screenshots/01-frame-overview.png)
+![Before and after — wide photo to Story 9:16](docs/screenshots/00-before-after-story.png)
 
 </div>
 
@@ -31,9 +31,7 @@ Two workspaces, one app:
 
 ### See it in action
 
-A wide photo into a 9:16 Story, and a tall photo into a 1:1 Post — the **original picture stays untouched**; only the new margins are filled (here with the *Blurred photo* style):
-
-![Before and after — wide photo to Story 9:16](docs/screenshots/00-before-after-story.png)
+A tall photo into a 1:1 Post — the **original picture stays untouched**; only the new margins are filled (here with the *Blurred photo* style; the banner above shows a wide photo into a 9:16 Story):
 
 ![Before and after — tall photo to Post 1:1](docs/screenshots/00-before-after-square.png)
 
@@ -94,6 +92,11 @@ This is the invariant the whole app is built around and **continuously tested ag
 ---
 
 ## Screenshots
+
+### The workspace
+Sidebar to switch between framing and video; drop photos and see them framed instantly.
+
+![Frame — overview](docs/screenshots/01-frame-overview.png)
 
 ### Pick a platform & format
 Instagram, TikTok, YouTube, X, Facebook, LinkedIn, or a Custom ratio — each with its real dimensions.

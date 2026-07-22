@@ -8,7 +8,7 @@ import { exportRecord } from "../export/record";
 import { REC, hasAEnc, hasVEnc } from "../export/capabilities";
 import { platform } from "../platform";
 import { drawAtTime, outDims } from "../render/sequence";
-import { S, app, byId, curTarget, hasAudio, totalDur } from "../state";
+import { S, app, byId, curTarget, hasAudio, sndExtent, totalDur } from "../state";
 import type { Item } from "../types";
 import { $, buildSeg, refreshSeg } from "./dom";
 import { positionPlayhead, renderTimeline } from "./timeline";
@@ -51,6 +51,46 @@ export function updateSelUI(): void {
   $("selAll").textContent = (m > 0 && selItems === m) ? "Select none" : "Select all";
   const btn = $<HTMLButtonElement>("exportBtn");
   if(!app.vbusy){ btn.disabled = (n === 0); btn.textContent = "Export video"; }
+  updateExportHint();
+}
+
+/**
+ * A plain-language heads-up before export: rough file size + resolution,
+ * how the music lines up with the video, and — loudest — a warning when
+ * this browser can only record in real time (or not at all).
+ */
+export function updateExportHint(): void {
+  const hint = $("expHint");
+  const setHint = function(html: string){
+    hint.innerHTML = html;
+    (hint as HTMLElement & { hidden: boolean }).hidden = !html;
+  };
+  if(app.vbusy || app.seq.length === 0){ setHint(""); return; }
+
+  const parts: string[] = [];
+
+  // browser support — the most important thing to say up front
+  if(!hasVEnc){
+    if(REC) parts.push('<b class="bad">This browser records in real time</b> — export runs for the whole ' + totalDur() + 's. For instant export use recent Chrome or Edge.');
+    else return void setHint('<b class="bad">This browser can\'t make videos.</b> Use a recent Chrome, Edge, or Safari.');
+  }
+
+  // rough file size from the chosen quality bitrate ladder
+  const q = VQUAL.filter(function(x){ return x.key === S.vq; })[0] || VQUAL[0];
+  const bps = q.v + (hasAudio() ? q.a : 0);
+  const mb = bps * totalDur() / 8 / 1048576;
+  const dims = outDims();
+  const size = mb >= 1 ? mb.toFixed(mb < 10 ? 1 : 0) + " MB" : Math.max(1, Math.round(mb*1024)) + " KB";
+  parts.push("About " + size + " · " + dims.W + "×" + dims.H + " · " + q.label + " quality.");
+
+  // how the soundtrack lines up with the video length
+  if(hasAudio()){
+    const vid = totalDur(), snd = sndExtent();
+    if(snd < vid - 0.3) parts.push("Music ends at " + fmtTime(Math.round(snd)) + ", but the video runs to " + fmtTime(vid) + " — the tail is silent.");
+    else if(snd > vid + 0.3) parts.push("Music runs past the video and will be cut at " + fmtTime(vid) + ".");
+  }
+
+  setHint(parts.join(" "));
 }
 
 export function studioOnFrameChange(): void {
@@ -170,6 +210,7 @@ export function invalidateResultQuiet(): void {
   Array.from(st.querySelectorAll("canvas,video")).forEach(function(n){ n.remove(); });
   $("dlResult").style.display = "none";
   $("resultInfo").textContent = "";
+  updateExportHint();
 }
 function invalidateResultForce(): void {
   resultBlob = null;
@@ -283,7 +324,7 @@ export function initStudio(): void {
   buildSeg($("segVQuality"), VQUAL, S.vq, function(k){
     S.vq = k;
     refreshSeg($("segVQuality"), VQUAL.map(function(x){return x.key;}), k);
-    invalidateResult(); markDirty();
+    invalidateResult(); updateExportHint(); markDirty();
   });
   const vfade = $<HTMLInputElement>("vfade"); vfade.checked = S.vfade;
 

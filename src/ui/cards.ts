@@ -133,10 +133,12 @@ function createCard(it: Item): void {
   };
   (card.querySelector(".rm") as HTMLButtonElement).onclick = function(){
     if(app.vbusy) return;
+    const clips = app.seq.filter(function(c){ return c.id === it.id; }).length;
     setSelected(it, false);
     app.items = app.items.filter(function(x){ return x.id !== it.id; });
     if(it.vurl){ URL.revokeObjectURL(it.vurl); it.vurl = undefined; }
     card.remove(); syncBars();
+    if(clips) showNotice("Removed “" + it.name + "” and its " + clips + (clips === 1 ? " clip" : " clips") + " from the video.");
   };
   grid.appendChild(card);
   it.el = card;

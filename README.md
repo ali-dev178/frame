@@ -11,7 +11,7 @@ Everything runs in your browser. No photo or audio ever leaves your machine.
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8)
 ![Tests](https://img.shields.io/badge/tests-94%20passing-3fb950)
 
-![Before and after — wide photo to Story 9:16](docs/screenshots/00-before-after-story.png)
+![One photo, every format — losslessly](docs/screenshots/hero.png)
 
 </div>
 
@@ -31,7 +31,9 @@ Two workspaces, one app:
 
 ### See it in action
 
-A tall photo into a 1:1 Post — the **original picture stays untouched**; only the new margins are filled (here with the *Blurred photo* style; the banner above shows a wide photo into a 9:16 Story):
+The **original picture stays untouched** — only the new margins are filled (here with the *Blurred photo* style). A wide photo into a 9:16 Story, and a tall photo into a 1:1 Post:
+
+![Before and after — wide photo to Story 9:16](docs/screenshots/00-before-after-story.png)
 
 ![Before and after — tall photo to Post 1:1](docs/screenshots/00-before-after-square.png)
 

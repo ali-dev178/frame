@@ -45,9 +45,6 @@ header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24p
 .navitem:hover{background:var(--panel-2);color:var(--ink)}
 .navitem.on{background:var(--panel-2);color:var(--ink);box-shadow:inset 3px 0 0 var(--brass)}
 .navico{color:var(--brass);font-size:12px;width:14px;text-align:center}
-.navfoot{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
-.phototally{color:var(--muted-2);font-size:12px}
-.side-add{width:100%;text-align:center}
 .workspace{flex:1;min-width:0}
 .topbar{margin-bottom:18px}
 .topbar .tabs{margin-bottom:12px}
@@ -57,8 +54,6 @@ header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24p
   .sidebar{position:static;flex-basis:auto;width:100%}
   .nav{flex-direction:row;flex-wrap:wrap}
   .navitem{flex:1}
-  .navfoot{border-top:0;padding-top:0;flex-direction:row;align-items:center;justify-content:space-between}
-  .side-add{width:auto}
 }
 
 /* ---- controls ---- */
@@ -185,7 +180,9 @@ footer b{color:var(--muted)}
 @keyframes blink{50%{opacity:.25}}
 .prog{position:absolute;left:14px;right:14px;bottom:10px;height:5px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden;display:none;z-index:2}
 .prog.on{display:block}
-.prog > i{display:block;height:100%;width:0;background:var(--brass)}
+.prog > i{display:block;height:100%;width:0;background:var(--brass);transition:width .2s ease}
+.proglbl{position:absolute;left:14px;bottom:20px;font-size:11px;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:12px;z-index:2}
+.proglbl:empty{display:none}
 .card .foot{flex-wrap:wrap}
 .card .foot .btn{flex:1 1 45%}
 .btn:disabled{opacity:.45;cursor:not-allowed}

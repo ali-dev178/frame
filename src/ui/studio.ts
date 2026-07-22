@@ -179,10 +179,29 @@ function invalidateResultForce(): void {
   $("dlResult").style.display = "none";
   $("resultInfo").textContent = "";
 }
+let progStart = 0; // performance.now() at the first real progress tick
+function resetProg(): void { progStart = 0; $("expLbl").textContent = ""; }
+/** "1m 05s" / "12s" / "under a second" — coarse, so the estimate doesn't jitter. */
+function fmtLeft(sec: number): string {
+  if(sec < 1) return "under a second";
+  const s = Math.round(sec);
+  return (s >= 60) ? Math.floor(s/60) + "m " + String(s%60).padStart(2,"0") + "s" : s + "s";
+}
 function setProg(f: number, label: string): void {
+  const pct = Math.min(1, Math.max(0, f));
   const pr = $("expProg"); pr.classList.add("on");
-  (pr.querySelector("i") as HTMLElement).style.width = (Math.min(1,f)*100).toFixed(1) + "%";
-  $("exportBtn").textContent = label + "… " + Math.round(Math.min(1,f)*100) + "%";
+  (pr.querySelector("i") as HTMLElement).style.width = (pct*100).toFixed(1) + "%";
+  $("exportBtn").textContent = label + "… " + Math.round(pct*100) + "%";
+  // time-left: linear-extrapolate from elapsed work; skip the noisy first 3%
+  const now = performance.now();
+  if(progStart === 0 || pct <= 0.01){ progStart = now; }
+  const lbl = $("expLbl");
+  if(pct > 0.03){
+    const left = (now - progStart) / pct * (1 - pct) / 1000;
+    lbl.textContent = Math.round(pct*100) + "% · about " + fmtLeft(left) + " left";
+  } else {
+    lbl.textContent = "Preparing…";
+  }
 }
 function setBusy(v: boolean): void {
   app.vbusy = v;
@@ -192,7 +211,7 @@ function setBusy(v: boolean): void {
   const cb = $<HTMLButtonElement>("cancelExport");
   cb.style.display = v ? "" : "none";
   if(v){ cb.disabled = false; cb.textContent = "Cancel"; $<HTMLButtonElement>("exportBtn").disabled = true; }
-  else { $("expProg").classList.remove("on"); $("expRec").classList.remove("on"); updateSelUI(); }
+  else { $("expProg").classList.remove("on"); $("expRec").classList.remove("on"); resetProg(); updateSelUI(); }
 }
 
 /** Canceled export: clear the in-progress stage and return to the pre-export state. */
@@ -332,6 +351,7 @@ export function initStudio(): void {
     pvPause();
     app.vcancel = false;
     setBusy(true);
+    resetProg();
     invalidateResultForce();
     $("result").style.display = "";
     const okFast = hasVEnc && (!hasAudio() || hasAEnc);

@@ -36,7 +36,6 @@ export function initCards(): void {
 
   $("clear").onclick = function(){ if(app.vbusy) return; app.items.forEach(function(it){ if(it.vurl){ URL.revokeObjectURL(it.vurl); it.vurl = undefined; } }); app.items = []; app.seq = []; grid.innerHTML=""; clearHistory(); invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
   $("dlAll").onclick = downloadAll;
-  $("sideAdd").onclick = function(){ file.click(); }; // sidebar "Add photos"
 }
 
 function addFiles(list: FileList): void {
@@ -258,7 +257,6 @@ export function syncBars(): void {
   empty.style.display = n ? "none" : "";
   (bar as HTMLElement & { hidden: boolean }).hidden = !n;
   countEl.textContent = n + (n===1 ? " photo" : " photos") + " ready";
-  $("phototally").textContent = n ? (n + (n===1 ? " photo" : " photos")) : "No photos yet";
   // the video panel's visibility is owned by the sidebar mode (src/ui/mode.ts)
   updateSelUI();
 }

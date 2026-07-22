@@ -1,10 +1,17 @@
 {
   "name": "frame",
-  "private": true,
+  "private": false,
   "version": "0.2.0",
   "description": "Fit photos into any social format — losslessly — and turn them into videos with your music.",
   "author": "Muhammad Ali <ali.dev178@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/ali-dev178/frame#readme",
+  "bugs": "https://github.com/ali-dev178/frame/issues",
   "repository": "github:ali-dev178/frame",
+  "keywords": [
+    "photo", "instagram", "social-media", "aspect-ratio", "framing", "lossless",
+    "slideshow", "video", "webcodecs", "electron", "pwa", "vite", "typescript"
+  ],
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {

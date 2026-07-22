@@ -36,10 +36,37 @@ export function initCards(): void {
 
   $("clear").onclick = function(){ if(app.vbusy) return; app.items.forEach(function(it){ if(it.vurl){ URL.revokeObjectURL(it.vurl); it.vurl = undefined; } }); app.items = []; app.seq = []; grid.innerHTML=""; clearHistory(); invalidateResult(); renderTimeline(); syncBars(); clearSaved(); markDirty(); };
   $("dlAll").onclick = downloadAll;
+  $("loadNoticeX").onclick = hideNotice;
 }
 
-function addFiles(list: FileList): void {
-  Array.from(list).filter(function(f){ return /^image\//.test(f.type); }).forEach(function(f){ loadFile(f); });
+let noticeTimer: number | undefined;
+/** Surface a load problem inline — silent drops are the #1 confusion (esp. iPhone HEIC). */
+function showNotice(msg: string): void {
+  const n = $("loadNotice");
+  $("loadNoticeMsg").textContent = msg;
+  (n as HTMLElement & { hidden: boolean }).hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = window.setTimeout(function(){ (n as HTMLElement & { hidden: boolean }).hidden = true; }, 9000);
+}
+function hideNotice(): void { (($("loadNotice")) as HTMLElement & { hidden: boolean }).hidden = true; }
+
+async function addFiles(list: FileList): Promise<void> {
+  const all = Array.from(list);
+  const images = all.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|avif|bmp|heic|heif)$/i.test(f.name); });
+  const notImages = all.length - images.length;
+
+  let failed = 0;
+  for(const f of images){
+    const it = await loadFile(f);
+    if(!it) failed++;
+  }
+
+  // report anything that didn't make it in — HEIC/corrupt decode failures + non-images
+  const parts: string[] = [];
+  if(failed) parts.push(failed + (failed === 1 ? " photo" : " photos") +
+    " couldn't be opened — likely an iPhone HEIC or an unsupported format. On iPhone, set Camera → Formats → “Most Compatible”, or convert to JPG/PNG first.");
+  if(notImages) parts.push(notImages + (notImages === 1 ? " file was" : " files were") + " skipped (not an image).");
+  if(parts.length) showNotice(parts.join(" ")); else hideNotice();
 }
 
 /** Loads one image file into the grid; resolves with the item (null on failure).

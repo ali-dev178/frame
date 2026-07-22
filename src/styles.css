@@ -110,6 +110,10 @@ input[type=range]::-moz-range-thumb{
 .drop h2{margin:0 0 6px;font-size:17px;font-weight:600}
 .drop p{margin:0;color:var(--muted);font-size:13px}
 .drop .plus{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);color:var(--brass);font-size:24px;margin-bottom:14px}
+.notice{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:11px 14px;border:1px solid var(--line-2);border-left:3px solid var(--brass);border-radius:10px;background:var(--panel-2);color:var(--ink);font-size:13px;line-height:1.45}
+.notice[hidden]{display:none}
+.notice .noticeX{margin-left:auto;flex:none;appearance:none;border:0;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;padding:0 2px;line-height:1}
+.notice .noticeX:hover{color:var(--ink)}
 
 /* ---- gallery ---- */
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 14px;flex-wrap:wrap}

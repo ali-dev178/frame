@@ -199,9 +199,36 @@ npm run preview        # preview the production build
 Grab the installer for Windows or macOS from the
 [Releases](https://github.com/ali-dev178/frame/releases) page.
 
-Builds are currently **unsigned**:
-- **Windows**: SmartScreen will warn — click *More info → Run anyway*.
-- **macOS**: approve the app under *System Settings → Privacy & Security* after first launch.
+### ⚠️ The builds are unsigned — here's what that means
+
+Code-signing certificates cost money every year (Apple's Developer Program is
+~$99/yr; Windows certificates are ~$200–600/yr). Frame is a **free, open-source
+project**, so paying for signing isn't worth it — the installers are shipped
+**unsigned**. That's completely safe (every build is produced in public by
+GitHub Actions straight from this source code — you can read exactly what runs),
+but your OS will show a scary-looking warning the first time. Here's how to get
+past it:
+
+**Windows** — SmartScreen shows *"Windows protected your PC"*:
+1. Click **More info**.
+2. Click **Run anyway**.
+
+**macOS** — Gatekeeper says the app *"can't be opened"* or is *"from an
+unidentified developer"*:
+1. **Right-click** (or Control-click) the app → **Open**, then **Open** again in the dialog; **or**
+2. Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the Frame message.
+
+You only have to do this once per install.
+
+### Prefer not to trust a binary? Run from source
+
+Everything runs the same locally — no build needed to just use it:
+
+```bash
+git clone https://github.com/ali-dev178/frame.git
+cd frame && npm install
+npm run dev:desktop    # the desktop app, or `npm run dev` for the browser
+```
 
 ---
 

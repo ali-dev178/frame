@@ -1,7 +1,7 @@
 {
   "name": "frame",
   "private": false,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Fit photos into any social format — losslessly — and turn them into videos with your music.",
   "author": "Muhammad Ali <ali.dev178@gmail.com>",
   "license": "MIT",

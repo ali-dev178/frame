@@ -52,7 +52,11 @@ describe("video quality — measured, not promised", () => {
     S.motion = "static"; S.trans = "none"; S.look = "none"; S.vq = "ultra";
 
     const blob = await exportFast(function () {});
-    expect(blob.size).toBeGreaterThan(10000);
+    // sanity only: a real MP4 (container + a frame) is at least ~1 KB. A static
+    // Ultra frame compresses to very little (all-identical P-frames), and how
+    // little depends on the platform encoder — the actual quality bar is the
+    // PSNR/mean-error check below, not the byte count.
+    expect(blob.size).toBeGreaterThan(1000);
 
     // decode the REAL MP4 with mediabunny + WebCodecs
     const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });

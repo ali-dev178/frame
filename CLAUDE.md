@@ -10,9 +10,6 @@ video slideshow with music. Runs entirely in the browser; no photo or audio ever
 The roadmap targets Windows/macOS desktop apps via an Electron shell around this same web core
 (plus a PWA build) — see the phase plan below.
 
-`instagram-frame-tool.html` at the repo root is the **original single-file app**, kept as a frozen
-historical baseline. Do not edit it; the live code is `index.html` + `src/`.
-
 ## Commands
 
 - `npm run dev` — Vite dev server, pure web (the main dev loop)

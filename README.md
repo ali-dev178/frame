@@ -331,5 +331,3 @@ Frame is **fully client-side**. Your photos, audio, and videos are processed ent
 ## License
 
 [MIT](LICENSE) © 2026 Muhammad Ali
-
-<sub>`instagram-frame-tool.html` at the repo root is the original single-file prototype, kept as a frozen historical baseline. The live app is `index.html` + `src/`.</sub>
